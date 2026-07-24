@@ -26,6 +26,11 @@ import type {
   MoveToInput,
 } from "../../engine/exploration.ts";
 
+// Extended input type for RED phase: skill influences.
+interface TravelInputWithStealth extends TravelInput {
+  stealth?: number;
+}
+
 // Extended input type for RED phase: POI connections.
 interface DiscoverPOIConnectionInput extends DiscoverPOIInput {
   connected_to?: string;
@@ -450,6 +455,57 @@ describe("travel", () => {
       assert.ok(
         triggerCount > 1,
         `Expected more than 1 encounter on the same route, got ${triggerCount}`
+      );
+    } finally {
+      Math.random = originalRandom;
+    }
+
+    db.close();
+  });
+
+  it("should reduce encounter chance when stealth skill is high", async () => {
+    // Arrange
+    const db = await createDB();
+    db.run(
+      "INSERT INTO locations (name, description, danger_level, discovered, visited) VALUES (?, ?, ?, ?, ?), (?, ?, ?, ?, ?)",
+      ["潜行起点", "危险起点", 3, 1, 1, "潜行终点", "危险终点", 3, 1, 0]
+    );
+    db.run(
+      "INSERT INTO location_connections (from_location, to_location, distance_km) VALUES (?, ?, ?)",
+      ["潜行起点", "潜行终点", 4]
+    );
+
+    const inputWithoutStealth: TravelInput = {
+      current_location: "潜行起点",
+      target_location: "潜行终点",
+    };
+    const inputWithStealth: TravelInputWithStealth = {
+      current_location: "潜行起点",
+      target_location: "潜行终点",
+      stealth: 10,
+    };
+
+    // Base chance for danger=3: 3*0.12+0.08 = 0.44
+    // With stealth=10: 0.44 * (1.0 - 10*0.03) = 0.308
+    // roll=0.4 should trigger without stealth but not with stealth.
+    const originalRandom = Math.random;
+    Math.random = () => 0.4;
+
+    try {
+      // Act
+      const resultWithoutStealth = travel(db, inputWithoutStealth);
+      const resultWithStealth = travel(db, inputWithStealth);
+
+      // Assert
+      assert.strictEqual(
+        resultWithoutStealth.encounter.triggered,
+        true,
+        "expected encounter to trigger without stealth when roll=0.4"
+      );
+      assert.strictEqual(
+        resultWithStealth.encounter.triggered,
+        false,
+        "expected encounter not to trigger with stealth=10 when roll=0.4"
       );
     } finally {
       Math.random = originalRandom;

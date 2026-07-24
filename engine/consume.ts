@@ -8,6 +8,7 @@ export interface ConsumeInput {
     hp: number;
     hp_max: number;
   };
+  medicine?: number;
 }
 
 export interface ConsumeResult {
@@ -24,7 +25,8 @@ export function consumeItem(input: ConsumeInput): ConsumeResult {
 
   switch (effect_type) {
     case "heal": {
-      const actualHeal = Math.min(effect_value, hp_max - hp);
+      const medicineBonus = input.medicine ? Math.floor(input.medicine * 1.5) : 0;
+      const actualHeal = Math.min(effect_value + medicineBonus, hp_max - hp);
       return {
         effect_type: "heal",
         hp_before: hp,

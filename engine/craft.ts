@@ -17,6 +17,7 @@ export interface InventoryItem {
 export interface CraftInput {
   recipe: CraftRecipe;
   inventory: InventoryItem[];
+  mechanics?: number;
 }
 
 export interface CraftMissing {
@@ -65,9 +66,10 @@ export function craftItem(input: CraftInput): CraftResult {
     return { success: false, missing_ingredients: missing };
   }
 
+  const mechanicsBonus = input.mechanics ? Math.floor(input.mechanics * 0.2) : 0;
   return {
     success: true,
     items_consumed: consumed,
-    items_produced: [{ item_name: input.recipe.result_item, quantity: input.recipe.result_quantity }],
+    items_produced: [{ item_name: input.recipe.result_item, quantity: input.recipe.result_quantity + mechanicsBonus }],
   };
 }

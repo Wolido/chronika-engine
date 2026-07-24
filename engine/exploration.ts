@@ -69,6 +69,7 @@ export function discoverLocation(db: any, input: DiscoverInput): DiscoverResult 
 export interface TravelInput {
   current_location: string;
   target_location: string;
+  stealth?: number;
 }
 
 export interface TravelEncounter {
@@ -134,8 +135,11 @@ export function travel(db: any, input: TravelInput): TravelResult {
     const toDanger = toDangerResult.length > 0 ? (toDangerResult[0].values[0]?.[0] as number) ?? 1 : 1;
     const avgDanger = (fromDanger + toDanger) / 2;
     const encounterChance = avgDanger * 0.12 + 0.08;
+    // Apply stealth reduction
+    const stealthMod = input.stealth ? (1.0 - input.stealth * 0.03) : 1.0;
+    const finalChance = encounterChance * stealthMod;
 
-    if (Math.random() < encounterChance) {
+    if (Math.random() < finalChance) {
       const types = ["combat", "loot", "event", "npc"];
       const typeIdx = Math.floor(Math.random() * types.length);
       const avgDangerRounded = Math.round(avgDanger);

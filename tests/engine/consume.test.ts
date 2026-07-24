@@ -2,6 +2,19 @@ import { describe, it } from "node:test";
 import assert from "node:assert";
 import { consumeItem } from "../../engine/consume.ts";
 
+interface ConsumeInput {
+  item: {
+    name: string;
+    effect_type: string;
+    effect_value: number;
+  };
+  target: {
+    hp: number;
+    hp_max: number;
+  };
+  medicine?: number;
+}
+
 describe("consumeItem", () => {
   it("should heal by effect_value when effect_type is 'heal'", () => {
     const result = consumeItem({
@@ -46,5 +59,23 @@ describe("consumeItem", () => {
       target: { hp: 10, hp_max: 40 },
     });
     assert.strictEqual(result.hp_after, 40);
+  });
+
+  it("should increase heal amount when medicine skill is high", () => {
+    // Arrange
+    const input: ConsumeInput = {
+      item: { name: "治疗粉", effect_type: "heal", effect_value: 20 },
+      target: { hp: 10, hp_max: 50 },
+      medicine: 10,
+    };
+
+    // Act
+    const result = consumeItem(input);
+
+    // Assert
+    assert.strictEqual(result.hp_before, 10);
+    assert.strictEqual(result.hp_after, 45);
+    assert.strictEqual(result.hp_change, 35);
+    assert.strictEqual(result.effect_type, "heal");
   });
 });

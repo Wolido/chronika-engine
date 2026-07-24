@@ -8,6 +8,7 @@ export interface LootEntry {
 export interface LootInput {
   table: LootEntry[];
   luck_modifier?: number;
+  survival?: number;
 }
 
 export interface LootItem {
@@ -53,7 +54,8 @@ export function rollLoot(input: LootInput): LootResult {
     });
 
     if (dropped) {
-      const quantity = rollBetween(entry.quantity_min, entry.quantity_max);
+      const survivalBonus = input.survival ? Math.floor(input.survival / 3) : 0;
+      const quantity = rollBetween(entry.quantity_min, entry.quantity_max + survivalBonus);
       items.push({ item_name: entry.item_name, quantity });
     }
   }

@@ -6,7 +6,7 @@ export function registerConsumeTool(pi: ExtensionAPI) {
   pi.registerTool({
     name: "consume",
     label: "Consume",
-    description: "Use a consumable item on a target. Supports heal (restore HP up to max), damage (deal HP damage, min 0), and restore (fully heal to max HP).",
+    description: "Use a consumable item on a target. Supports heal (restore HP up to max), damage (deal HP damage, min 0), and restore (fully heal to max HP).\n\nMedicine skill increases healing amount: +floor(medicine × 1.5) HP for heal effects.",
     parameters: Type.Object({
       item: Type.Object({
         name: Type.String({ description: "Item name" }),
@@ -17,6 +17,7 @@ export function registerConsumeTool(pi: ExtensionAPI) {
         hp: Type.Number({ description: "Current HP" }),
         hp_max: Type.Number({ description: "Maximum HP" }),
       }),
+      medicine: Type.Optional(Type.Number({ description: "Medicine skill — increases heal amount" })),
     }),
     async execute(_toolCallId, params) {
       const result = consumeItem(params);

@@ -6,7 +6,7 @@ export function registerCraftTool(pi: ExtensionAPI) {
   pi.registerTool({
     name: "craft",
     label: "Craft",
-    description: "Attempt to craft an item from a recipe. Checks if the player has all required ingredients, then returns what was consumed and produced. Fails with details if ingredients are missing.",
+    description: "Attempt to craft an item from a recipe. Checks if the player has all required ingredients, then returns what was consumed and produced. Fails with details if ingredients are missing.\n\nMechanics skill increases output quantity: +floor(mechanics × 0.2) added to result quantity.",
     parameters: Type.Object({
       recipe: Type.Object({
         result_item: Type.String({ description: "Item to craft" }),
@@ -20,6 +20,7 @@ export function registerCraftTool(pi: ExtensionAPI) {
         item_name: Type.String({ description: "Item name" }),
         quantity: Type.Number({ description: "Quantity held" }),
       }), { description: "Current player inventory" }),
+      mechanics: Type.Optional(Type.Number({ description: "Mechanics skill — increases output quantity" })),
     }),
     async execute(_toolCallId, params) {
       const result = craftItem(params);

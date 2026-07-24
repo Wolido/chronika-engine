@@ -2,6 +2,12 @@ import { describe, it } from "node:test";
 import assert from "node:assert";
 import { craftItem, type CraftRecipe, type InventoryItem } from "../../engine/craft.ts";
 
+interface CraftInput {
+  recipe: CraftRecipe;
+  inventory: InventoryItem[];
+  mechanics?: number;
+}
+
 // ============================================================
 // Tests
 // ============================================================
@@ -148,6 +154,31 @@ describe("craftItem", () => {
         { item_name: "废铁", needed: 3, have: 0 },
         { item_name: "螺栓", needed: 2, have: 0 },
       ],
+    );
+  });
+
+  it("should increase result quantity when mechanics skill is high without changing material cost", () => {
+    // Arrange
+    const recipe: CraftRecipe = {
+      result_item: "简易零件",
+      result_quantity: 1,
+      ingredients: [{ item_name: "废铁", quantity: 2 }],
+    };
+    const inventory: InventoryItem[] = [{ item_name: "废铁", quantity: 10 }];
+    const input: CraftInput = { recipe, inventory, mechanics: 10 };
+
+    // Act
+    const result = craftItem(input);
+
+    // Assert
+    assert.strictEqual(result.success, true);
+    assert.deepStrictEqual(
+      result.items_consumed,
+      [{ item_name: "废铁", quantity: 2 }],
+    );
+    assert.deepStrictEqual(
+      result.items_produced,
+      [{ item_name: "简易零件", quantity: 3 }],
     );
   });
 });

@@ -16,6 +16,7 @@ interface LootEntry {
 interface LootInput {
   table: LootEntry[];
   luck_modifier?: number;  // 可选幸运修正（加法，如 0.05 = +5% 概率）
+  survival?: number;       // 可选生存技能，提高掉落数量上限
 }
 
 interface LootItem {
@@ -145,6 +146,33 @@ describe("rollLoot", () => {
     assert.ok(
       dropCount >= 70 && dropCount <= 130,
       `expected 70-130 drops out of 200 with luck_modifier=0.2, got ${dropCount}`,
+    );
+  });
+
+  it("should increase drop quantity上限 when survival skill is high", () => {
+    const table: LootEntry[] = [
+      { item_name: "必掉物资", drop_chance: 1.0, quantity_min: 1, quantity_max: 2 },
+    ];
+
+    let foundAboveBase = false;
+    for (let i = 0; i < 10; i++) {
+      const result = rollLoot({ table, survival: 9 });
+      const dropped = result.items.find(item => item.item_name === "必掉物资");
+
+      assert.ok(dropped, `run ${i}: guaranteed item should always drop`);
+      assert.ok(
+        dropped!.quantity >= 1 && dropped!.quantity <= 5,
+        `run ${i}: quantity ${dropped!.quantity} out of expected range [1, 5]`,
+      );
+
+      if (dropped!.quantity > 2) {
+        foundAboveBase = true;
+      }
+    }
+
+    assert.ok(
+      foundAboveBase,
+      "expected at least one drop with quantity > 2 when survival=9",
     );
   });
 });

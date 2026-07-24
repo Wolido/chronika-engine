@@ -9,6 +9,7 @@ export interface TradeInput {
   items: TradeItem[];
   mode: "buy" | "sell";
   price_modifier?: number;
+  charisma?: number;
 }
 
 export interface TradeResult {
@@ -22,8 +23,14 @@ export interface TradeResult {
 
 export function trade(input: TradeInput): TradeResult {
   const modifier = input.price_modifier ?? 1.0;
+  // Apply charisma modifier (additive with price_modifier)
+  let charismaMod = 0;
+  if (input.charisma) {
+    charismaMod = input.mode === "buy" ? -input.charisma * 0.02 : input.charisma * 0.02;
+  }
+  const finalModifier = modifier + charismaMod;
   const totalCost = Math.round(
-    input.items.reduce((sum, item) => sum + item.quantity * item.price_per_unit, 0) * modifier
+    input.items.reduce((sum, item) => sum + item.quantity * item.price_per_unit, 0) * finalModifier
   );
 
   if (input.mode === "buy") {

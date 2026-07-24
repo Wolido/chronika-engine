@@ -101,7 +101,23 @@ function getGMGuide(topic?: string): string {
   - 敏捷: 基准 5，每点 ±2% 闪避率
   - 耐力: （预留，未来影响 HP）
   - 意志: （预留，未来影响状态抗性）`,
-    attributes: `## 属性与技能检定
+    attributes: `## 属性与技能
+
+### 属性（升级+1/级）
+- 力量: combat 伤害加成（每4点+1）
+- 敏捷: combat 闪避加成（基准5，每点±2%）
+- 感知: combat 命中加成（基准5，每点±2%）
+- 耐力: HP 加成（hp_max = 20 + endurance × 2）
+- 智力: craft 产量加成（+floor(intelligence × 0.2)）
+- 意志: 状态抗性（持续回合减半）
+
+### 技能（升级+3/级）
+- 生存: loot 数量加成（+floor(survival / 3) max quantity）
+- 医疗: consume 治疗加成（+floor(medicine × 1.5) HP）
+- 机械: craft 产量加成（+floor(mechanics × 0.2)）
+- 魅力: trade 价格修正（buy -2%/点, sell +2%/点）
+- 口才: skill_check 检定用
+- 潜行: travel 遇敌降低（×(1.0 - stealth × 0.03)）
 
 skill_check 的 modifier 参数应基于玩家属性计算。
 推荐规则（GM 可自行调整）：

@@ -51,11 +51,12 @@ export function registerExplorationTools(pi: ExtensionAPI) {
   pi.registerTool({
     name: "travel",
     label: "Travel",
-    description: "Travel between wasteland locations on the world map. Distance is in kilometers. May trigger random encounters with mutants, raiders, or other wasteland dangers along the way.",
+    description: "Travel between wasteland locations on the world map. Distance is in kilometers. May trigger random encounters with mutants, raiders, or other wasteland dangers along the way.\n\nStealth skill reduces encounter probability: ×(1.0 - stealth × 0.03).",
     parameters: Type.Object({
       db_path: Type.String({ description: "Path to game database" }),
       current_location: Type.String({ description: "Current location name" }),
       target_location: Type.String({ description: "Destination location name" }),
+      stealth: Type.Optional(Type.Number({ description: "Stealth skill — reduces encounter chance" })),
     }),
     async execute(_toolCallId, params) {
       const db = await openDB(params.db_path);

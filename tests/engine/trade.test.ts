@@ -2,6 +2,14 @@ import { describe, it } from "node:test";
 import assert from "node:assert";
 import { trade } from "../../engine/trade.ts";
 
+interface TradeInput {
+  credits: number;
+  items: { item_name: string; quantity: number; price_per_unit: number }[];
+  mode: "buy" | "sell";
+  price_modifier?: number;
+  charisma?: number;
+}
+
 describe("trade", () => {
 
   // --- 买：钱够 -------------------------------------------------
@@ -118,6 +126,44 @@ describe("trade", () => {
     assert.strictEqual(result.total_cost, 24); // 30 × 0.8
     assert.strictEqual(result.credits_before, 100);
     assert.strictEqual(result.credits_after, 76);
+  });
+
+  it("should reduce buy price when charisma is high", () => {
+    // Arrange
+    const input: TradeInput = {
+      credits: 100,
+      items: [{ item_name: "剑", quantity: 1, price_per_unit: 30 }],
+      mode: "buy",
+      charisma: 10,
+    };
+
+    // Act
+    const result = trade(input);
+
+    // Assert
+    assert.strictEqual(result.success, true);
+    assert.strictEqual(result.total_cost, 24); // 30 × (1.0 - 10 × 0.02)
+    assert.strictEqual(result.credits_before, 100);
+    assert.strictEqual(result.credits_after, 76);
+  });
+
+  it("should increase sell price when charisma is high", () => {
+    // Arrange
+    const input: TradeInput = {
+      credits: 50,
+      items: [{ item_name: "废铁", quantity: 1, price_per_unit: 15 }],
+      mode: "sell",
+      charisma: 10,
+    };
+
+    // Act
+    const result = trade(input);
+
+    // Assert
+    assert.strictEqual(result.success, true);
+    assert.strictEqual(result.total_cost, 18); // 15 × (1.0 + 10 × 0.02)
+    assert.strictEqual(result.credits_before, 50);
+    assert.strictEqual(result.credits_after, 68);
   });
 
 });
