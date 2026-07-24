@@ -37,6 +37,7 @@ export interface CombatInput {
     evasion: number;
     armor: number;
     hp: number;
+    stats?: CombatantStats;
   };
 }
 
@@ -68,7 +69,17 @@ function rollBetween(min: number, max: number): number {
 
 export function combatResolve(input: CombatInput): CombatResult {
   // 1. 命中判定
-  const hitThreshold = Math.max(0, Math.round((input.attacker.weapon.accuracy - input.defender.evasion) * 100));
+  // 感知偏移（基准 5，每点 ±2%）
+  const perceptionMod = (input.attacker.stats.perception - 5) * 0.02;
+  // 敏捷偏移（基准 5，每点 ±2%）
+  const agilityMod = (input.attacker.stats.agility - 5) * 0.02;
+  // 防御者敏捷偏移
+  const defenderAgilityMod = input.defender.stats ? (input.defender.stats.agility - 5) * 0.02 : 0;
+
+  const effectiveAccuracy = input.attacker.weapon.accuracy + perceptionMod + agilityMod;
+  const effectiveEvasion = input.defender.evasion + defenderAgilityMod;
+
+  const hitThreshold = Math.max(0, Math.round((effectiveAccuracy - effectiveEvasion) * 100));
   const hitRoll = rollD100();
   const hit = hitRoll <= hitThreshold;
 

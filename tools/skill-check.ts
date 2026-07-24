@@ -6,7 +6,7 @@ export function registerSkillCheckTool(pi: ExtensionAPI) {
   pi.registerTool({
     name: "skill_check",
     label: "Skill Check",
-    description: "Perform an attribute or skill check by rolling 1d20 + modifier against a difficulty. Returns success/failure, margin, and critical status (margin ≥ 10 = critical success, margin ≤ -10 = critical failure).",
+    description: "Perform an attribute or skill check by rolling 1d20 + modifier against a difficulty (1-30). The modifier should be calculated from the player's attribute: (attribute_value - 5). For example, agility=8 gives modifier=+3 for stealth checks. Returns success/failure, roll, total, margin, and critical status (margin ≥ 10 = critical).",
     parameters: Type.Object({
       difficulty: Type.Number({ description: "Difficulty threshold (1-30)" }),
       modifier: Type.Optional(Type.Number({ description: "Attribute or skill modifier (default 0)" })),

@@ -94,7 +94,28 @@ function getGMGuide(topic?: string): string {
 - 调用 \`combat_resolve\` 执行战斗裁定。
 - 传入攻击者属性、武器数据、防御者数据。
 - 可附带 element 和 legendary 参数。
-- 战斗后将结果更新到数据库，调用 \`log_event\` 记录。`,
+- 战斗后将结果更新到数据库，调用 \`log_event\` 记录。
+- 属性影响：
+  - 力量: 每 4 点 +1 伤害（已有）
+  - 感知: 基准 5，每点 ±2% 命中率
+  - 敏捷: 基准 5，每点 ±2% 闪避率
+  - 耐力: （预留，未来影响 HP）
+  - 意志: （预留，未来影响状态抗性）`,
+    attributes: `## 属性与技能检定
+
+skill_check 的 modifier 参数应基于玩家属性计算。
+推荐规则（GM 可自行调整）：
+
+| 行动类型 | 主属性 | modifier 算法 |
+|---------|--------|-------------|
+| 近战攻击 | strength | 已由 combat_resolve 处理 |
+| 闪避/潜行 | agility | agility - 5 |
+| 扛伤害/长跑 | endurance | endurance - 5 |
+| 侦查/搜索 | perception | perception - 5 |
+| 知识/破解 | intelligence | intelligence - 5 |
+| 抗压/说服 | willpower | willpower - 5 |
+
+例如：玩家尝试潜入（agility=8），modifier = 8-5 = +3`,
     loot: `## 掉落
 
 - 用 \`loot\` 工具按概率表生成掉落物。

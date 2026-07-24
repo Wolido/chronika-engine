@@ -42,6 +42,7 @@ interface CombatInput {
     legendary?: LegendaryData;
   };
   defender: {
+    stats?: CombatantStats;
     evasion: number;      // 0.0 - 1.0
     armor: number;
     hp: number;
@@ -81,8 +82,7 @@ function sampleCombat(overrides: Partial<CombatInput> = {}): CombatInput {
       weapon: { damage_min: 3, damage_max: 8, accuracy: 0.75, damage_type: "slashing" },
       ...overrides.attacker,
     },
-    defender: { evasion: 0.2, armor: 2, hp: 30 },
-    ...overrides,
+    defender: { evasion: 0.2, armor: 2, hp: 30, ...overrides.defender },
   };
 }
 
@@ -94,7 +94,7 @@ describe("combatResolve", () => {
 
   // --- 命中判定 -------------------------------------------------
 
-  it("should hit roughly 60% of the time when accuracy=0.8 and evasion=0.2", () => {
+  it("should hit roughly 58% of the time when accuracy=0.78 and evasion=0.2", () => {
     const input = sampleCombat({
       attacker: {
         stats: { strength: 8, agility: 5, endurance: 6, perception: 4, intelligence: 3, willpower: 3 },
@@ -108,12 +108,13 @@ describe("combatResolve", () => {
 
     for (let i = 0; i < N; i++) {
       const result = combatResolve(input);
+      assert.strictEqual(result.hit_threshold, 58, `Expected hit_threshold=58, got ${result.hit_threshold}`);
       hits += result.hit ? 1 : 0;
     }
 
     assert.ok(
-      hits >= 100 && hits <= 140,
-      `Expected 100–140 hits out of ${N}, got ${hits}`
+      hits >= 100 && hits <= 132,
+      `Expected 100–132 hits out of ${N}, got ${hits}`
     );
   });
 
@@ -142,7 +143,7 @@ describe("combatResolve", () => {
     // 使用 accuracy=1.0, evasion=0.0 保证必定命中，专注验证伤害公式
     const input = sampleCombat({
       attacker: {
-        stats: { strength: 8, agility: 5, endurance: 6, perception: 4, intelligence: 3, willpower: 3 },
+        stats: { strength: 8, agility: 5, endurance: 6, perception: 5, intelligence: 3, willpower: 3 },
         weapon: { damage_min: 5, damage_max: 10, accuracy: 1.0, damage_type: "slashing" },
       },
       defender: { evasion: 0.0, armor: 2, hp: 30 },
@@ -184,7 +185,7 @@ describe("combatResolve", () => {
     // armor >= any rawTotal → absorb = rawTotal → final = 0
     const input = sampleCombat({
       attacker: {
-        stats: { strength: 4, agility: 5, endurance: 6, perception: 4, intelligence: 3, willpower: 3 },
+        stats: { strength: 4, agility: 5, endurance: 6, perception: 5, intelligence: 3, willpower: 3 },
         weapon: { damage_min: 3, damage_max: 5, accuracy: 1.0, damage_type: "piercing" },
       },
       defender: { evasion: 0.0, armor: 10, hp: 30 },
@@ -214,7 +215,7 @@ describe("combatResolve", () => {
   it("should trigger elemental proc roughly 50% of the time when proc_chance=0.5", () => {
     const input = sampleCombat({
       attacker: {
-        stats: { strength: 8, agility: 5, endurance: 6, perception: 4, intelligence: 3, willpower: 3 },
+        stats: { strength: 8, agility: 5, endurance: 6, perception: 5, intelligence: 3, willpower: 3 },
         weapon: { damage_min: 5, damage_max: 10, accuracy: 1.0, damage_type: "slashing" },
         element: { element_type: "fire", proc_chance: 0.5 },
       },
@@ -241,7 +242,7 @@ describe("combatResolve", () => {
     // accuracy=1.0, evasion=0.0 → 必定命中
     const input = sampleCombat({
       attacker: {
-        stats: { strength: 8, agility: 5, endurance: 6, perception: 4, intelligence: 3, willpower: 3 },
+        stats: { strength: 8, agility: 5, endurance: 6, perception: 5, intelligence: 3, willpower: 3 },
         weapon: { damage_min: 5, damage_max: 10, accuracy: 1.0, damage_type: "slashing" },
       },
       defender: { evasion: 0.0, armor: 0, hp: 30 },
@@ -287,13 +288,43 @@ describe("combatResolve", () => {
     );
   });
 
+  // --- 属性影响命中/闪避 ---------------------------------------
+
+  it("should increase defender evasion when agility is high, making hits harder", () => {
+    const input = sampleCombat({
+      attacker: {
+        stats: { strength: 8, agility: 5, endurance: 6, perception: 5, intelligence: 3, willpower: 3 },
+        weapon: { damage_min: 5, damage_max: 10, accuracy: 0.8, damage_type: "slashing" },
+      },
+      defender: { stats: { strength: 8, agility: 15, endurance: 6, perception: 4, intelligence: 3, willpower: 3 }, evasion: 0.2, armor: 2, hp: 30 },
+    });
+
+    const result = combatResolve(input);
+
+    assert.strictEqual(result.hit_threshold, 40, `Expected hit_threshold=40 (evasion 0.2 + 0.2 agility bonus), got ${result.hit_threshold}`);
+  });
+
+  it("should increase attacker accuracy when perception is high, making hits easier", () => {
+    const input = sampleCombat({
+      attacker: {
+        stats: { strength: 8, agility: 5, endurance: 6, perception: 15, intelligence: 3, willpower: 3 },
+        weapon: { damage_min: 5, damage_max: 10, accuracy: 0.8, damage_type: "slashing" },
+      },
+      defender: { evasion: 0.2, armor: 2, hp: 30 },
+    });
+
+    const result = combatResolve(input);
+
+    assert.strictEqual(result.hit_threshold, 80, `Expected hit_threshold=80 (accuracy 0.8 + 0.2 perception bonus), got ${result.hit_threshold}`);
+  });
+
   // --- 传奇武器特效 --------------------------------------------
 
   // 辅助：必定命中的战斗 + on_hit multiply_damage 传奇
   function hitCombatWithLegendary(effectType: string, magnitude: number): CombatInput {
     return sampleCombat({
       attacker: {
-        stats: { strength: 8, agility: 5, endurance: 6, perception: 4, intelligence: 3, willpower: 3 },
+        stats: { strength: 8, agility: 5, endurance: 6, perception: 5, intelligence: 3, willpower: 3 },
         weapon: { damage_min: 7, damage_max: 7, accuracy: 1.0, damage_type: "slashing" },
         legendary: {
           effect_name: "Rending Flames",
@@ -385,7 +416,7 @@ describe("combatResolve", () => {
     // pre-legend: 7+2-2=7, magnitude=2.0 → final=14
     const input = sampleCombat({
       attacker: {
-        stats: { strength: 8, agility: 5, endurance: 6, perception: 4, intelligence: 3, willpower: 3 },
+        stats: { strength: 8, agility: 5, endurance: 6, perception: 5, intelligence: 3, willpower: 3 },
         weapon: { damage_min: 7, damage_max: 7, accuracy: 1.0, damage_type: "piercing" },
         legendary: {
           effect_name: "Void Strike",
@@ -417,7 +448,7 @@ describe("combatResolve", () => {
     // Arrange: damage_raw=10, no armor → final=12 (10+2), lifesteal=0.3 → restore 3.6 → floor 3
     const input = sampleCombat({
       attacker: {
-        stats: { strength: 8, agility: 5, endurance: 6, perception: 4, intelligence: 3, willpower: 3 },
+        stats: { strength: 8, agility: 5, endurance: 6, perception: 5, intelligence: 3, willpower: 3 },
         weapon: { damage_min: 10, damage_max: 10, accuracy: 1.0, damage_type: "slashing" },
         legendary: {
           effect_name: "Soul Drinker",
