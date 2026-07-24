@@ -15,6 +15,7 @@ import { registerWeaponGenTool } from "./tools/weapon-gen";
 import { registerEquipTools } from "./tools/equip";
 import { registerEventLogTools } from "./tools/event-log";
 import { registerExplorationTools } from "./tools/exploration";
+import { registerGMGuideTool } from "./tools/gm-guide";
 
 export default function (pi: ExtensionAPI) {
   registerDiceTool(pi);
@@ -33,6 +34,7 @@ export default function (pi: ExtensionAPI) {
   registerEquipTools(pi);
   registerEventLogTools(pi);
   registerExplorationTools(pi);
+  registerGMGuideTool(pi);
 
   pi.on("session_start", async (_event, ctx) => {
     ctx.ui.notify("⚙️ Chronika Engine loaded", "info");
