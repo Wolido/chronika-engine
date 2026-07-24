@@ -131,7 +131,7 @@ export function registerDBTools(pi: ExtensionAPI) {
   pi.registerTool({
     name: "init_db",
     label: "Init DB",
-    description: "Create a new Chronika game database file with the complete schema (tables: world_meta, characters, weapons, items, monsters, inventory, event_log, game_state, plugin_registry, status_effects, actions). Safe to call if file already exists — returns info without overwriting.",
+    description: "Create a new database for a wasteland survival RPG. Initializes 20 tables including locations, weapons, monsters, items, etc. Call this first when starting a new game. The world is a post-nuclear wasteland where survivors scavenge, fight mutants, and struggle to survive.",
     parameters: Type.Object({
       db_path: Type.String({ description: "Path where to create the database (e.g. './worlds/my_game.db')" }),
       world_name: Type.Optional(Type.String({ description: "Optional world name stored in world_meta" })),

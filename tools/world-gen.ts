@@ -19,7 +19,7 @@ export function registerWorldGenTool(pi: ExtensionAPI) {
   pi.registerTool({
     name: "world_gen",
     label: "World Gen",
-    description: "Generate a game world database from structured data. Validates all entities (weapons, monsters, items, status effects, actions) and writes them to the database. If any entity fails validation, nothing is written.",
+    description: "Generate a complete wasteland world database with weapons, monsters, items, status effects, and actions. Designed for a post-apocalyptic survival RPG setting. All entities are validated before writing. If any validation fails, nothing is written. Weapons include makeshift melee and rare firearms. Monsters include mutants, beasts, and hostile survivors.",
     parameters: Type.Object({
       db_path: Type.String({ description: "Path to the SQLite database file (will be created if doesn't exist)" }),
       world_meta: Type.Optional(Type.Object({

@@ -6,7 +6,7 @@ export function registerCombatTool(pi: ExtensionAPI) {
   pi.registerTool({
     name: "combat_resolve",
     label: "Combat Resolve",
-    description: "Resolve a single combat action: hit check, damage calculation (with strength bonus and armor absorption), and elemental effect proc. Returns full combat result including remaining HP.",
+    description: "Resolve a combat action in the wasteland: hit check, damage calculation with strength bonus and armor absorption, elemental effect proc. Weapons can have fire, corrosive, shock, or other elemental effects. Legendary effects multiply damage or provide lifesteal. Returns remaining HP and kill status.",
     parameters: Type.Object({
       attacker: Type.Object({
         stats: Type.Object({

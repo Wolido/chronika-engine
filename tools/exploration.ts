@@ -27,7 +27,7 @@ export function registerExplorationTools(pi: ExtensionAPI) {
   pi.registerTool({
     name: "discover_location",
     label: "Discover Location",
-    description: "Discover a new location connected to an existing one. Creates both the location entry and the connection. Call this when exploring reveals a new place.",
+    description: "Discover a new wasteland location connected to an existing one. Use when the player finds a significant new place that requires travel to reach — not for small rooms or building interiors (use discover_poi for those).",
     parameters: Type.Object({
       db_path: Type.String({ description: "Path to game database" }),
       name: Type.String({ description: "New location name" }),
@@ -51,7 +51,7 @@ export function registerExplorationTools(pi: ExtensionAPI) {
   pi.registerTool({
     name: "travel",
     label: "Travel",
-    description: "Travel from current location to a connected location. May trigger encounters along the way.",
+    description: "Travel between wasteland locations on the world map. Distance is in kilometers. May trigger random encounters with mutants, raiders, or other wasteland dangers along the way.",
     parameters: Type.Object({
       db_path: Type.String({ description: "Path to game database" }),
       current_location: Type.String({ description: "Current location name" }),
@@ -70,7 +70,7 @@ export function registerExplorationTools(pi: ExtensionAPI) {
   pi.registerTool({
     name: "explore",
     label: "Explore",
-    description: "Search the current location for points of interest, resources, or encounters.",
+    description: "Search the current wasteland location for points of interest, salvageable resources, hidden threats, or encounters. Use this when the player wants to scavenge, look around, or search a building or area.",
     parameters: Type.Object({
       db_path: Type.String({ description: "Path to game database" }),
       location_name: Type.String({ description: "Location to explore" }),

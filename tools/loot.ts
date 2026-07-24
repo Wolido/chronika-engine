@@ -6,7 +6,7 @@ export function registerLootTool(pi: ExtensionAPI) {
   pi.registerTool({
     name: "loot",
     label: "Loot",
-    description: "Roll on a loot table to determine which items drop. Each entry has a drop chance (0.0-1.0) and quantity range. Optional luck modifier increases all drop chances.",
+    description: "Roll on a loot table to determine what a wasteland corpse, container, or scavenge spot yields. Items include scrap metal, bottle caps, food, medicine, weapon parts, and rare finds.",
     parameters: Type.Object({
       table: Type.Array(Type.Object({
         item_name: Type.String({ description: "Item name" }),
