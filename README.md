@@ -68,6 +68,7 @@ combat_resolve attacker: {stats: {strength: 8, agility: 5, endurance: 6, percept
 | `get_map` | 查看地图 |
 | `discover_poi` | 发现地点内的 POI |
 | `move_to` | 在 POI 间移动 |
+| `generate_weapon` | 随机生成武器（含传奇特效） |
 
 ## 推荐启动命令
 
