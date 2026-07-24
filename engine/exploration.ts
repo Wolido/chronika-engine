@@ -142,6 +142,8 @@ export interface ExploreResult {
   danger_level: number;
   has_shelter: boolean;
   pois: { name: string; description: string; discovered: boolean }[];
+  available_connections: { to_poi: string; description?: string }[];
+  cross_location_exits: { to_location: string; via: string }[];
   discoveries: string[];
   encounter?: TravelEncounter;
   current_poi?: string;
@@ -151,7 +153,7 @@ export interface ExploreResult {
 export function explore(db: any, input: ExploreInput): ExploreResult {
   const locResult = db.exec(`SELECT description, danger_level, has_shelter FROM locations WHERE name = '${input.location_name}'`);
   if (locResult.length === 0 || locResult[0].values.length === 0) {
-    return { location_name: input.location_name, description: "", danger_level: 0, has_shelter: false, pois: [], discoveries: [], error: `Location "${input.location_name}" not found` };
+    return { location_name: input.location_name, description: "", danger_level: 0, has_shelter: false, pois: [], available_connections: [], cross_location_exits: [], discoveries: [], error: `Location "${input.location_name}" not found` };
   }
 
   const row = locResult[0];
@@ -173,6 +175,25 @@ export function explore(db: any, input: ExploreInput): ExploreResult {
     }
   }
 
+  // Query connections from this location
+  const connResult = db.exec(`SELECT pc.to_poi, pc.to_location, pc.description, pc.from_poi FROM poi_connections pc WHERE pc.location_name = '${input.location_name}'`);
+  const availableConnections: { to_poi: string; description?: string }[] = [];
+  const crossLocationExits: { to_location: string; via: string }[] = [];
+  for (const r of connResult) {
+    for (const v of r.values) {
+      const toPoi = v[0] as string | null;
+      const toLoc = v[1] as string | null;
+      const desc = v[2] as string | null;
+      const fromPoi = v[3] as string;
+      if (toPoi) {
+        availableConnections.push({ to_poi: toPoi, description: desc || undefined });
+      }
+      if (toLoc) {
+        crossLocationExits.push({ to_location: toLoc, via: fromPoi });
+      }
+    }
+  }
+
   for (const encRow of encResult) {
     for (const val of encRow.values) {
       const encType = val[0] as string;
@@ -188,7 +209,7 @@ export function explore(db: any, input: ExploreInput): ExploreResult {
     if (encounter?.triggered) break;
   }
 
-  return { location_name: input.location_name, description, danger_level: dangerLevel, has_shelter: hasShelter === 1, pois, discoveries, encounter };
+  return { location_name: input.location_name, description, danger_level: dangerLevel, has_shelter: hasShelter === 1, pois, available_connections: availableConnections, cross_location_exits: crossLocationExits, discoveries, encounter };
 }
 
 // ---------------------------------------------------------------------------
@@ -244,6 +265,8 @@ export interface DiscoverPOIInput {
   name: string;
   description: string;
   has_shelter?: boolean;
+  connected_to?: string;
+  to_location?: string;
 }
 
 export interface DiscoverPOIResult {
@@ -251,6 +274,7 @@ export interface DiscoverPOIResult {
   location: string;
   poi: string;
   total_pois: number;
+  connection_created: boolean;
   error?: string;
 }
 
@@ -264,39 +288,88 @@ export interface MoveToResult {
   location: string;
   poi: string;
   pois_available: string[];
+  cross_location?: string;
   error?: string;
 }
 
 export function discoverPOI(db: any, input: DiscoverPOIInput): DiscoverPOIResult {
   const locResult = db.exec(`SELECT name FROM locations WHERE name = '${input.location_name}'`);
   if (locResult.length === 0 || locResult[0].values.length === 0) {
-    return { success: false, location: input.location_name, poi: input.name, total_pois: 0, error: `Location "${input.location_name}" not found` };
+    return { success: false, location: input.location_name, poi: input.name, total_pois: 0, connection_created: false, error: `Location "${input.location_name}" not found` };
   }
 
   const existingResult = db.exec(`SELECT name FROM location_pois WHERE location_name = '${input.location_name}' AND name = '${input.name}'`);
   if (existingResult.length > 0 && existingResult[0].values.length > 0) {
-    return { success: false, location: input.location_name, poi: input.name, total_pois: 0, error: `POI "${input.name}" already exists in "${input.location_name}"` };
+    return { success: false, location: input.location_name, poi: input.name, total_pois: 0, connection_created: false, error: `POI "${input.name}" already exists in "${input.location_name}"` };
   }
 
   db.run("INSERT INTO location_pois (location_name, name, description, has_shelter, discovered) VALUES (?, ?, ?, ?, 1)", [input.location_name, input.name, input.description, input.has_shelter ? 1 : 0]);
 
+  let connectionCreated = false;
+  if (input.connected_to) {
+    db.run("INSERT INTO poi_connections (location_name, from_poi, to_poi, to_location) VALUES (?, ?, ?, ?)", [input.location_name, input.connected_to, input.name, input.to_location || null]);
+    connectionCreated = true;
+  }
+
   const countResult = db.exec(`SELECT COUNT(*) as c FROM location_pois WHERE location_name = '${input.location_name}' AND discovered = 1`);
   const total = countResult[0]?.values[0]?.[0] ?? 1;
 
-  return { success: true, location: input.location_name, poi: input.name, total_pois: total as number };
+  return { success: true, location: input.location_name, poi: input.name, total_pois: total as number, connection_created: connectionCreated };
 }
 
 export function moveTo(db: any, input: MoveToInput): MoveToResult {
+  // Check if target POI exists in this location
   const poiResult = db.exec(`SELECT name FROM location_pois WHERE location_name = '${input.location_name}' AND name = '${input.target_poi}'`);
   if (poiResult.length === 0 || poiResult[0].values.length === 0) {
-    // Check if location has any POIs at all
     const anyPoiResult = db.exec(`SELECT name FROM location_pois WHERE location_name = '${input.location_name}'`);
     const available = anyPoiResult.length > 0 ? anyPoiResult[0].values.map(v => v[0] as string) : [];
     return { success: false, location: input.location_name, poi: input.target_poi, pois_available: available, error: `POI "${input.target_poi}" not found in "${input.location_name}"` };
   }
 
-  const allPoisResult = db.exec(`SELECT name FROM location_pois WHERE location_name = '${input.location_name}' AND discovered = 1`);
-  const allPois = allPoisResult.length > 0 ? allPoisResult[0].values.map(v => v[0] as string) : [];
+  // If no poi_connections are defined for this location, movement is unrestricted
+  const connCountResult = db.exec(`SELECT COUNT(*) as c FROM poi_connections WHERE location_name = '${input.location_name}'`);
+  const connCount = (connCountResult[0]?.values[0]?.[0] ?? 0) as number;
 
-  return { success: true, location: input.location_name, poi: input.target_poi, pois_available: allPois };
+  if (connCount === 0) {
+    const allPoisResult = db.exec(`SELECT name FROM location_pois WHERE location_name = '${input.location_name}' AND discovered = 1`);
+    const allPois = allPoisResult.length > 0 ? allPoisResult[0].values.map(v => v[0] as string) : [];
+    return { success: true, location: input.location_name, poi: input.target_poi, pois_available: allPois };
+  }
+
+  // Check for a direct connection leading to the target POI
+  const connResult = db.exec(
+    `SELECT pc.to_location FROM poi_connections pc WHERE pc.location_name = '${input.location_name}' AND pc.to_poi = '${input.target_poi}'`
+  );
+
+  if (connResult.length === 0 || connResult[0].values.length === 0) {
+    // No direct connection found - show what IS available
+    const availResult = db.exec(`SELECT DISTINCT pc.to_poi FROM poi_connections pc WHERE pc.location_name = '${input.location_name}' AND pc.to_poi IS NOT NULL`);
+    const available: string[] = [];
+    for (const r of availResult) {
+      for (const v of r.values) {
+        if (v[0]) available.push(v[0] as string);
+      }
+    }
+    return { success: false, location: input.location_name, poi: input.target_poi, pois_available: available, error: `No direct connection to "${input.target_poi}"` };
+  }
+
+  // Check if this connection leads to another world location
+  const toLocation = connResult[0].values[0][0] as string | null;
+
+  // Get all destinations reachable from the new current POI
+  const allAvailResult = db.exec(`SELECT pc.to_poi FROM poi_connections pc WHERE pc.location_name = '${input.location_name}' AND pc.from_poi = '${input.target_poi}' AND pc.to_poi IS NOT NULL`);
+  const allAvailable: string[] = [];
+  for (const r of allAvailResult) {
+    for (const v of r.values) {
+      if (v[0]) allAvailable.push(v[0] as string);
+    }
+  }
+
+  return {
+    success: true,
+    location: input.location_name,
+    poi: input.target_poi,
+    pois_available: allAvailable,
+    cross_location: toLocation || undefined,
+  };
 }

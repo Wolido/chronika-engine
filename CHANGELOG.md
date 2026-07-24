@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+- POI 连接系统：POI 间路径 + 跨地点出口
+- poi_connections 表（第20张表）
+- move_to / explore 现在按连接驱动
+- 测试覆盖：224 个
 ### Added
 - 两层地图系统：世界地图（locations）+ 局部地图（location_pois）
 - discover_poi：在已有地点内发现新 POI（房间/建筑/地标）

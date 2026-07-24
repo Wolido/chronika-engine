@@ -83,7 +83,9 @@ export function registerExplorationTools(pi: ExtensionAPI) {
       const shelterLine = result.has_shelter ? "\n🏠 Has shelter (safe to rest)" : "";
       const discLines = result.discoveries.length > 0 ? `\n\n**Discoveries:**\n${result.discoveries.map(d => `  • ${d}`).join("\n")}` : "";
       const poiLines = result.pois.length > 0 ? `\n\n**Points of Interest:**\n${result.pois.map(p => `  • ${p.name}${p.discovered ? "" : " (undiscovered)"}`).join("\n")}` : "";
-      return { content: [{ type: "text", text: `📍 **${result.location_name}** (danger level: ${result.danger_level})${shelterLine}\n${result.description}${discLines}${poiLines}` }], details: result };
+      const connLines = result.available_connections.length > 0 ? `\n\n**From here you can go to:**\n${result.available_connections.map(c => `  • ${c.to_poi}${c.description ? ": " + c.description : ""}`).join("\n")}` : "";
+      const exitLines = result.cross_location_exits.length > 0 ? `\n**Exits to other areas:**\n${result.cross_location_exits.map(e => `  • ${e.via} → ${e.to_location}`).join("\n")}` : "";
+      return { content: [{ type: "text", text: `📍 **${result.location_name}** (danger level: ${result.danger_level})${shelterLine}\n${result.description}${discLines}${poiLines}${connLines}${exitLines}` }], details: result };
     },
   });
 
@@ -97,6 +99,8 @@ export function registerExplorationTools(pi: ExtensionAPI) {
       name: Type.String({ description: "POI name" }),
       description: Type.String({ description: "POI description" }),
       has_shelter: Type.Optional(Type.Boolean({ description: "Can rest here" })),
+      connected_to: Type.Optional(Type.String({ description: "Existing POI this connects from" })),
+      to_location: Type.Optional(Type.String({ description: "World location this POI exits to" })),
     }),
     async execute(_toolCallId, params) {
       const db = await openDB(params.db_path);
@@ -121,7 +125,9 @@ export function registerExplorationTools(pi: ExtensionAPI) {
       const result = moveTo(db, { location_name: params.location_name, target_poi: params.target_poi });
       db.close();
       if (!result.success) return { content: [{ type: "text", text: `❌ ${result.error}` }], details: result, isError: true };
-      return { content: [{ type: "text", text: `🚶 Moved to "${result.poi}" in ${result.location}.\nAvailable POIs: ${result.pois_available.join(", ")}` }], details: result };
+      const crossLine = result.cross_location ? `\n🚪 This leads to: ${result.cross_location} (use travel to go there)` : "";
+      const availLine = result.pois_available.length > 0 ? `\nFrom here you can go to: ${result.pois_available.join(", ")}` : "";
+      return { content: [{ type: "text", text: `🚶 Moved to "${result.poi}" in ${result.location}.${availLine}${crossLine}` }], details: result };
     },
   });
 

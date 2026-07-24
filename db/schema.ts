@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 5;
+export const SCHEMA_VERSION = 6;
 
 export const DDL_STATEMENTS = `
 PRAGMA foreign_keys = ON;
@@ -227,5 +227,14 @@ CREATE TABLE IF NOT EXISTS location_pois (
   has_shelter INTEGER DEFAULT 0,
   discovered INTEGER DEFAULT 0,
   UNIQUE(location_name, name)
+);
+
+CREATE TABLE IF NOT EXISTS poi_connections (
+  id INTEGER PRIMARY KEY,
+  location_name TEXT NOT NULL,
+  from_poi TEXT NOT NULL,
+  to_poi TEXT,
+  to_location TEXT,
+  description TEXT
 );
 `;

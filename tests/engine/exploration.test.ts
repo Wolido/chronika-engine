@@ -1,9 +1,9 @@
 /**
- * exploration.test.ts — RED phase: 探索 / 地图系统引擎测试
+ * exploration.test.ts — 探索 / 地图系统引擎测试
  *
- * 测试 discoverLocation / travel / explore / getKnownMap 的期望行为。
- * 当前四个函数均为抛出 "NOT IMPLEMENTED" 的桩实现，
- * 因此全部 11 个测试处于 RED（失败）状态。
+ * 测试 discoverLocation / travel / explore / getKnownMap / discoverPOI / moveTo 的期望行为。
+ * 当前 discoverPOI / moveTo / explore 的 POI 连接功能尚未实现，
+ * 因此新增 6 个连接相关测试处于 RED（失败）状态。
  */
 
 import { describe, it, before } from "node:test";
@@ -25,6 +25,12 @@ import type {
   DiscoverPOIInput,
   MoveToInput,
 } from "../../engine/exploration.ts";
+
+// Extended input type for RED phase: POI connections.
+interface DiscoverPOIConnectionInput extends DiscoverPOIInput {
+  connected_to?: string;
+  to_location?: string;
+}
 
 // ---------------------------------------------------------------------------
 // DDL
@@ -67,6 +73,15 @@ CREATE TABLE IF NOT EXISTS location_pois (
   has_shelter INTEGER DEFAULT 0,
   discovered INTEGER DEFAULT 0,
   UNIQUE(location_name, name)
+);
+
+CREATE TABLE IF NOT EXISTS poi_connections (
+  id INTEGER PRIMARY KEY,
+  location_name TEXT NOT NULL,
+  from_poi TEXT NOT NULL,
+  to_poi TEXT,
+  to_location TEXT,
+  description TEXT
 );
 `;
 
@@ -609,6 +624,240 @@ describe("explore POIs", () => {
     // Assert
     assert.ok(Array.isArray(result.pois));
     assert.deepStrictEqual(result.pois, []);
+
+    db.close();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// POI connections (RED phase)
+// ---------------------------------------------------------------------------
+
+describe("discoverPOI connections", () => {
+  it("should create a poi_connections row when connected_to is provided", async () => {
+    // Arrange
+    const db = await createDB();
+    db.run(
+      "INSERT INTO locations (name, description, discovered) VALUES (?, ?, ?)",
+      ["东部废墟", "坍塌的高楼", 1]
+    );
+    db.run(
+      "INSERT INTO location_pois (location_name, name, description, discovered) VALUES (?, ?, ?, ?)",
+      ["东部废墟", "入口", "破碎的大门", 1]
+    );
+    const input: DiscoverPOIConnectionInput = {
+      location_name: "东部废墟",
+      name: "地下仓库",
+      description: "堆满杂物的地下室",
+      connected_to: "入口",
+    };
+
+    // Act
+    const result = discoverPOI(db, input);
+
+    // Assert
+    assert.strictEqual(result.success, true);
+    assert.strictEqual((result as any).connection_created, true);
+
+    const rows = db.exec(
+      "SELECT location_name, from_poi, to_poi, to_location FROM poi_connections WHERE location_name = '东部废墟'"
+    );
+    assert.ok(rows.length > 0 && rows[0].values.length > 0, "Expected a poi_connections row");
+    const [locName, fromPoi, toPoi, toLocation] = rows[0].values[0] as string[];
+    assert.strictEqual(locName, "东部废墟");
+    assert.strictEqual(fromPoi, "入口");
+    assert.strictEqual(toPoi, "地下仓库");
+    assert.strictEqual(toLocation, null);
+
+    db.close();
+  });
+
+  it("should store to_location in poi_connections when provided", async () => {
+    // Arrange
+    const db = await createDB();
+    db.run(
+      "INSERT INTO locations (name, description, discovered) VALUES (?, ?, ?)",
+      ["东部废墟", "坍塌的高楼", 1]
+    );
+    db.run(
+      "INSERT INTO location_pois (location_name, name, description, discovered) VALUES (?, ?, ?, ?)",
+      ["东部废墟", "入口", "破碎的大门", 1]
+    );
+    const input: DiscoverPOIConnectionInput = {
+      location_name: "东部废墟",
+      name: "逃生通道",
+      description: "通往外界的裂缝",
+      connected_to: "入口",
+      to_location: "外部荒野",
+    };
+
+    // Act
+    const result = discoverPOI(db, input);
+
+    // Assert
+    assert.strictEqual(result.success, true);
+    assert.strictEqual((result as any).connection_created, true);
+
+    const rows = db.exec(
+      "SELECT to_location FROM poi_connections WHERE from_poi = '入口' AND to_poi = '逃生通道'"
+    );
+    assert.ok(rows.length > 0 && rows[0].values.length > 0, "Expected a poi_connections row");
+    assert.strictEqual(rows[0].values[0][0], "外部荒野");
+
+    db.close();
+  });
+});
+
+describe("moveTo connections", () => {
+  it("should move to a directly connected POI", async () => {
+    // Arrange
+    const db = await createDB();
+    db.run(
+      "INSERT INTO locations (name, description, discovered, visited) VALUES (?, ?, ?, ?)",
+      ["东部废墟", "坍塌的高楼", 1, 1]
+    );
+    db.run(
+      "INSERT INTO location_pois (location_name, name, description, discovered) VALUES (?, ?, ?, ?), (?, ?, ?, ?), (?, ?, ?, ?)",
+      [
+        "东部废墟", "入口", "破碎的大门", 1,
+        "东部废墟", "地下仓库", "堆满杂物的地下室", 1,
+        "东部废墟", "秘密房间", "隐藏的暗室", 1,
+      ]
+    );
+    db.run(
+      "INSERT INTO poi_connections (location_name, from_poi, to_poi, description) VALUES (?, ?, ?, ?), (?, ?, ?, ?)",
+      [
+        "东部废墟", "入口", "地下仓库", "向下的阶梯",
+        "东部废墟", "地下仓库", "秘密房间", "暗门后的通道",
+      ]
+    );
+
+    // Establish current POI at 入口 before testing the connection.
+    moveTo(db, { location_name: "东部废墟", target_poi: "入口" });
+
+    // Act
+    const result = moveTo(db, { location_name: "东部废墟", target_poi: "地下仓库" });
+
+    // Assert
+    assert.strictEqual(result.success, true);
+    assert.strictEqual(result.poi, "地下仓库");
+    // After moving, available POIs should be those reachable from the new current POI.
+    assert.deepStrictEqual(result.pois_available, ["秘密房间"]);
+
+    db.close();
+  });
+
+  it("should fail to move to a POI without a direct connection", async () => {
+    // Arrange
+    const db = await createDB();
+    db.run(
+      "INSERT INTO locations (name, description, discovered, visited) VALUES (?, ?, ?, ?)",
+      ["东部废墟", "坍塌的高楼", 1, 1]
+    );
+    db.run(
+      "INSERT INTO location_pois (location_name, name, description, discovered) VALUES (?, ?, ?, ?), (?, ?, ?, ?), (?, ?, ?, ?)",
+      [
+        "东部废墟", "入口", "破碎的大门", 1,
+        "东部废墟", "地下仓库", "堆满杂物的地下室", 1,
+        "东部废墟", "瞭望塔", "高耸的残塔", 1,
+      ]
+    );
+    db.run(
+      "INSERT INTO poi_connections (location_name, from_poi, to_poi) VALUES (?, ?, ?)",
+      ["东部废墟", "入口", "地下仓库"]
+    );
+
+    // Establish current POI at 入口.
+    moveTo(db, { location_name: "东部废墟", target_poi: "入口" });
+
+    // Act
+    const result = moveTo(db, { location_name: "东部废墟", target_poi: "瞭望塔" });
+
+    // Assert
+    assert.strictEqual(result.success, false);
+    assert.ok(
+      result.pois_available.includes("地下仓库"),
+      `Expected pois_available to include '地下仓库', got: ${JSON.stringify(result.pois_available)}`
+    );
+    assert.ok(
+      !result.pois_available.includes("瞭望塔"),
+      `Expected pois_available not to include the unconnected '瞭望塔', got: ${JSON.stringify(result.pois_available)}`
+    );
+
+    db.close();
+  });
+});
+
+describe("explore connections", () => {
+  it("should include available_connections from the current POI", async () => {
+    // Arrange
+    const db = await createDB();
+    db.run(
+      "INSERT INTO locations (name, description, danger_level, has_shelter, discovered) VALUES (?, ?, ?, ?, ?)",
+      ["东部废墟", "坍塌的高楼", 3, 0, 1]
+    );
+    db.run(
+      "INSERT INTO location_pois (location_name, name, description, discovered) VALUES (?, ?, ?, ?), (?, ?, ?, ?), (?, ?, ?, ?)",
+      [
+        "东部废墟", "入口", "破碎的大门", 1,
+        "东部废墟", "地下仓库", "堆满杂物的地下室", 1,
+        "东部废墟", "瞭望塔", "高耸的残塔", 1,
+      ]
+    );
+    db.run(
+      "INSERT INTO poi_connections (location_name, from_poi, to_poi, description) VALUES (?, ?, ?, ?), (?, ?, ?, ?)",
+      [
+        "东部废墟", "入口", "地下仓库", "向下的阶梯",
+        "东部废墟", "入口", "瞭望塔", "向上的铁梯",
+      ]
+    );
+
+    // Set current POI to 入口 so available_connections are deterministic.
+    moveTo(db, { location_name: "东部废墟", target_poi: "入口" });
+
+    // Act
+    const result = explore(db, { location_name: "东部废墟" });
+
+    // Assert
+    const connections = (result as any).available_connections;
+    assert.ok(Array.isArray(connections), "Expected available_connections to be an array");
+    assert.strictEqual(connections.length, 2);
+    const targets = connections.map((c: any) => c.to_poi).sort();
+    assert.deepStrictEqual(targets, ["地下仓库", "瞭望塔"]);
+    assert.ok(
+      connections.some((c: any) => c.to_poi === "地下仓库" && typeof c.description === "string"),
+      "Expected connection to include description"
+    );
+
+    db.close();
+  });
+
+  it("should include cross_location_exits for POIs that lead to world locations", async () => {
+    // Arrange
+    const db = await createDB();
+    db.run(
+      "INSERT INTO locations (name, description, danger_level, has_shelter, discovered) VALUES (?, ?, ?, ?, ?)",
+      ["东部废墟", "坍塌的高楼", 3, 0, 1]
+    );
+    db.run(
+      "INSERT INTO location_pois (location_name, name, description, discovered) VALUES (?, ?, ?, ?)",
+      ["东部废墟", "逃生通道", "通往外界的裂缝", 1]
+    );
+    db.run(
+      "INSERT INTO poi_connections (location_name, from_poi, to_poi, to_location) VALUES (?, ?, ?, ?)",
+      ["东部废墟", "逃生通道", null, "外部荒野"]
+    );
+
+    // Act
+    const result = explore(db, { location_name: "东部废墟" });
+
+    // Assert
+    const exits = (result as any).cross_location_exits;
+    assert.ok(Array.isArray(exits), "Expected cross_location_exits to be an array");
+    assert.ok(
+      exits.some((e: any) => e.to_location === "外部荒野" && e.via === "逃生通道"),
+      `Expected cross_location_exits to include exit to 外部荒野 via 逃生通道, got: ${JSON.stringify(exits)}`
+    );
 
     db.close();
   });
