@@ -19,6 +19,7 @@ import { registerGMGuideTool } from "./tools/gm-guide";
 import { registerEncounterTool } from "./tools/encounter";
 import { registerTraderTool } from "./tools/trader";
 import { registerLootGenTool } from "./tools/loot-gen";
+import { registerTakeLootTool } from "./tools/take-loot";
 
 export default function (pi: ExtensionAPI) {
   registerDiceTool(pi);
@@ -41,6 +42,7 @@ export default function (pi: ExtensionAPI) {
   registerEncounterTool(pi);
   registerTraderTool(pi);
   registerLootGenTool(pi);
+  registerTakeLootTool(pi);
 
   pi.on("session_start", async (_event, ctx) => {
     ctx.ui.notify("⚙️ Chronika Engine loaded", "info");

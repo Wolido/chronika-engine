@@ -22,11 +22,11 @@ const VALID_RARITIES = ["common", "uncommon", "rare", "legendary"];
 // ============================================================
 
 function tier1Input(): GenerateLootInput {
-  return { tier: 1, enemy_type: "beast" };
+  return { tier: 1 };
 }
 
 function tier5Input(): GenerateLootInput {
-  return { tier: 5, enemy_type: "mutant" };
+  return { tier: 5 };
 }
 
 /** 运行 N 次 generateLoot，返回所有结果 */
