@@ -1,6 +1,6 @@
 # Chronika Engine
 
-**数据驱动的文字 RPG 引擎，基于 Pi 框架，用自然语言玩游戏。**
+**数据驱动的废土生存文字 RPG 引擎，基于 Pi 框架，用自然语言玩游戏。**
 
 Chronika 将大语言模型作为游戏主持人（GM），所有游戏机制由 TypeScript 插件执行，LLM 只负责叙事。游戏数据全部存储在 SQLite 中。
 
