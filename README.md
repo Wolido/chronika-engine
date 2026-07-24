@@ -87,7 +87,7 @@ log_event,get_history,\
 discover_location,travel,explore,get_map,\
 discover_poi,move_to \
   --no-skills \
-  --model deepseek-v4-flash"
+  --append-system-prompt .pi/CHRONIKA_SYSTEM.md --model deepseek-v4-flash"
 ```
 
 ## 存档管理
