@@ -31,6 +31,10 @@ interface TravelInputWithStealth extends TravelInput {
   stealth?: number;
 }
 
+interface TravelInputWithTracking extends TravelInput {
+  tracking?: number;
+}
+
 // Extended input type for RED phase: POI connections.
 interface DiscoverPOIConnectionInput extends DiscoverPOIInput {
   connected_to?: string;
@@ -459,6 +463,57 @@ describe("travel", () => {
     } finally {
       Math.random = originalRandom;
     }
+
+    db.close();
+  });
+
+  // --- 追踪发现信息 (RED phase) ----------------------------------------
+
+  it("should have a chance to discover extra info when tracking is high", async () => {
+    // Arrange
+    // tracking=10 → 10 × 0.05 = 50% chance per travel
+    const db = await createDB();
+    db.run(
+      "INSERT INTO locations (name, description, danger_level, discovered, visited) VALUES (?, ?, ?, ?, ?), (?, ?, ?, ?, ?)",
+      ["追踪起点", "追踪测试起点", 1, 1, 1, "追踪终点", "追踪测试终点", 1, 1, 0]
+    );
+    db.run(
+      "INSERT INTO location_connections (from_location, to_location, distance_km) VALUES (?, ?, ?)",
+      ["追踪起点", "追踪终点", 4]
+    );
+
+    const input: TravelInputWithTracking = {
+      current_location: "追踪起点",
+      target_location: "追踪终点",
+      tracking: 10,
+    };
+
+    // Act
+    let discoveryCount = 0;
+    let detailNonEmpty = true;
+    for (let i = 0; i < 50; i++) {
+      const result = travel(db, input as TravelInput);
+      assert.strictEqual(result.success, true);
+      const r = result as any;
+      if (r.tracking_discovery) {
+        discoveryCount++;
+        if (!r.tracking_detail || r.tracking_detail.length === 0) {
+          detailNonEmpty = false;
+        }
+      }
+    }
+
+    // Assert
+    // 50 × 0.5 = 25 expected; at least 10 is very safe lower bound
+    assert.ok(
+      discoveryCount >= 10,
+      `expected at least 10 tracking discoveries out of 50 with tracking=10, got ${discoveryCount}`,
+    );
+    assert.strictEqual(
+      detailNonEmpty,
+      true,
+      "tracking_detail should be non-empty when tracking_discovery is true",
+    );
 
     db.close();
   });

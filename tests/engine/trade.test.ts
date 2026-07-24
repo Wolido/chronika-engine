@@ -8,6 +8,7 @@ interface TradeInput {
   mode: "buy" | "sell";
   price_modifier?: number;
   barter?: number;
+  persuade?: number;
 }
 
 describe("trade", () => {
@@ -164,6 +165,54 @@ describe("trade", () => {
     assert.strictEqual(result.total_cost, 18); // 15 × (1.0 + 10 × 0.02)
     assert.strictEqual(result.credits_before, 50);
     assert.strictEqual(result.credits_after, 68);
+  });
+
+  // --- 口才叠加议价：买 -------------------------------------------------
+
+  it("should stack persuade with barter for deeper buy discount", () => {
+    // Arrange
+    // barter=10 → -0.20, persuade=10 → -0.10, total modifier = -0.30
+    const input: TradeInput = {
+      credits: 100,
+      items: [{ item_name: "剑", quantity: 1, price_per_unit: 30 }],
+      mode: "buy",
+      barter: 10,
+      persuade: 10,
+    };
+
+    // Act
+    const result = trade(input);
+
+    // Assert
+    // 30 × (1.0 - 10×0.02 - 10×0.01) = 30 × 0.70 = 21
+    assert.strictEqual(result.success, true);
+    assert.strictEqual(result.total_cost, 21);
+    assert.strictEqual(result.credits_before, 100);
+    assert.strictEqual(result.credits_after, 79);
+  });
+
+  // --- 口才叠加议价：卖 -------------------------------------------------
+
+  it("should stack persuade with barter for higher sell price", () => {
+    // Arrange
+    // barter=5 → +0.10, persuade=5 → +0.05, total modifier = +0.15
+    const input: TradeInput = {
+      credits: 50,
+      items: [{ item_name: "废铁", quantity: 1, price_per_unit: 20 }],
+      mode: "sell",
+      barter: 5,
+      persuade: 5,
+    };
+
+    // Act
+    const result = trade(input);
+
+    // Assert
+    // 20 × (1.0 + 5×0.02 + 5×0.01) = 20 × 1.15 = 23
+    assert.strictEqual(result.success, true);
+    assert.strictEqual(result.total_cost, 23);
+    assert.strictEqual(result.credits_before, 50);
+    assert.strictEqual(result.credits_after, 73);
   });
 
 });

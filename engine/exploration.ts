@@ -70,6 +70,7 @@ export interface TravelInput {
   current_location: string;
   target_location: string;
   stealth?: number;
+  tracking?: number;
 }
 
 export interface TravelEncounter {
@@ -85,6 +86,8 @@ export interface TravelResult {
   to: string;
   distance_km: number;
   encounter: TravelEncounter;
+  tracking_discovery?: boolean;
+  tracking_detail?: string;
   error?: string;
 }
 
@@ -155,7 +158,18 @@ export function travel(db: any, input: TravelInput): TravelResult {
   // Mark target as visited
   db.run(`UPDATE locations SET visited = 1, discovered = 1 WHERE name = '${input.target_location}'`);
 
-  return { success: true, from: input.current_location, to: input.target_location, distance_km: distance, encounter };
+  // Tracking discovery
+  let trackingDiscovery = false;
+  let trackingDetail: string | undefined;
+  if (input.tracking && input.tracking > 0) {
+    trackingDiscovery = Math.random() < input.tracking * 0.05;
+    if (trackingDiscovery) {
+      const trackingTypes = ["animal tracks", "distant smoke", "old trail markers", "scavenged supplies", "hidden shelter"];
+      trackingDetail = trackingTypes[Math.floor(Math.random() * trackingTypes.length)];
+    }
+  }
+
+  return { success: true, from: input.current_location, to: input.target_location, distance_km: distance, encounter, tracking_discovery: trackingDiscovery || undefined, tracking_detail: trackingDetail };
 }
 
 // ---------------------------------------------------------------------------

@@ -10,6 +10,7 @@ export interface TradeInput {
   mode: "buy" | "sell";
   price_modifier?: number;
   barter?: number;
+  persuade?: number;
 }
 
 export interface TradeResult {
@@ -23,12 +24,15 @@ export interface TradeResult {
 
 export function trade(input: TradeInput): TradeResult {
   const modifier = input.price_modifier ?? 1.0;
-  // Apply barter modifier (additive with price_modifier)
-  let barterMod = 0;
+  // Apply skill modifiers (additive)
+  let skillMod = 0;
   if (input.barter) {
-    barterMod = input.mode === "buy" ? -input.barter * 0.02 : input.barter * 0.02;
+    skillMod += input.mode === "buy" ? -input.barter * 0.02 : input.barter * 0.02;
   }
-  const finalModifier = modifier + barterMod;
+  if (input.persuade) {
+    skillMod += input.mode === "buy" ? -input.persuade * 0.01 : input.persuade * 0.01;
+  }
+  const finalModifier = modifier + skillMod;
   const totalCost = Math.round(
     input.items.reduce((sum, item) => sum + item.quantity * item.price_per_unit, 0) * finalModifier
   );

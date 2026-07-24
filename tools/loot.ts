@@ -6,7 +6,7 @@ export function registerLootTool(pi: ExtensionAPI) {
   pi.registerTool({
     name: "loot",
     label: "Loot",
-    description: "Roll on a loot table to determine what a wasteland corpse, container, or scavenge spot yields. Items include scrap metal, bottle caps, food, medicine, weapon parts, and rare finds.\n\nSurvival skill increases maximum drop quantities: floor(survival / 3) added to quantity_max.",
+    description: "Roll on a loot table to determine what a wasteland corpse, container, or scavenge spot yields. Items include scrap metal, bottle caps, food, medicine, weapon parts, and rare finds.\n\nSurvival skill increases maximum drop quantities: floor(survival / 3) added to quantity_max. Locksmith skill adds +2% drop chance per point (for lockpicked containers).",
     parameters: Type.Object({
       table: Type.Array(Type.Object({
         item_name: Type.String({ description: "Item name" }),
@@ -16,12 +16,15 @@ export function registerLootTool(pi: ExtensionAPI) {
       }), { description: "Array of loot table entries" }),
       luck_modifier: Type.Optional(Type.Number({ description: "Luck modifier added to drop chances (default 0)" })),
       survival: Type.Optional(Type.Number({ description: "Survival skill level — increases max drop quantity" })),
+      locksmith: Type.Optional(Type.Number({ description: "Locksmith skill — +2% drop chance per point" })),
     }),
 
     async execute(_toolCallId, params) {
       const result = rollLoot({
         table: params.table,
         luck_modifier: params.luck_modifier ?? 0,
+        survival: params.survival,
+        locksmith: params.locksmith,
       });
 
       if (result.items.length === 0) {

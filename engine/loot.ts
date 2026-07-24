@@ -9,6 +9,7 @@ export interface LootInput {
   table: LootEntry[];
   luck_modifier?: number;
   survival?: number;
+  locksmith?: number;
 }
 
 export interface LootItem {
@@ -39,7 +40,7 @@ function rollBetween(min: number, max: number): number {
 export function rollLoot(input: LootInput): LootResult {
   const items: LootItem[] = [];
   const rolls: LootRoll[] = [];
-  const luckBonus = (input.luck_modifier ?? 0) * 100;
+  const luckBonus = (input.luck_modifier ?? 0) * 100 + (input.locksmith ?? 0) * 2;
 
   for (const entry of input.table) {
     const threshold = Math.max(0, Math.min(100, Math.round(entry.drop_chance * 100 + luckBonus)));

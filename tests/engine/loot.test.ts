@@ -17,6 +17,7 @@ interface LootInput {
   table: LootEntry[];
   luck_modifier?: number;  // 可选幸运修正（加法，如 0.05 = +5% 概率）
   survival?: number;       // 可选生存技能，提高掉落数量上限
+  locksmith?: number;       // 可选开锁技能，每点 +0.02 到实际掉落概率
 }
 
 interface LootItem {
@@ -146,6 +147,32 @@ describe("rollLoot", () => {
     assert.ok(
       dropCount >= 70 && dropCount <= 130,
       `expected 70-130 drops out of 200 with luck_modifier=0.2, got ${dropCount}`,
+    );
+  });
+
+  // --- 开锁提高掉落概率 -------------------------------------------------
+
+  it("should increase drop probability when locksmith is high", () => {
+    // Arrange
+    // drop_chance=0.2, locksmith=10 → effective probability = 0.2 + 10×0.02 = 0.4
+    const table: LootEntry[] = [
+      { item_name: "锁箱宝物", drop_chance: 0.2, quantity_min: 1, quantity_max: 1 },
+    ];
+
+    // Act
+    let dropCount = 0;
+    for (let i = 0; i < 200; i++) {
+      const result = rollLoot({ table, locksmith: 10 });
+      if (result.items.find(item => item.item_name === "锁箱宝物")) {
+        dropCount++;
+      }
+    }
+
+    // Assert
+    // 200 × 0.4 = 80 expected; generous 3σ range: ~59-101, widened to 60-140
+    assert.ok(
+      dropCount >= 60 && dropCount <= 140,
+      `expected 60-140 drops out of 200 with locksmith=10, got ${dropCount}`,
     );
   });
 

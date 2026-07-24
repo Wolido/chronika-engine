@@ -75,9 +75,8 @@ combat_resolve attacker: {stats: {strength: 8, agility: 5, endurance: 6, percept
 完整的 pg 命令（供 fish shell 用户参考）：
 
 ```fish
-abbr --add pg "cd ~/pi-workspace/chronika && \
-  pi \
-  --tools read,ls,grep,find,bash,subagent,\
+abbr --add pg "pi\
+  --tools read,ls,grep,find,\
 dice,db_query,db_exec,init_db,world_gen,\
 skill_check,combat_resolve,loot,\
 consume,craft,trade,\

@@ -51,20 +51,22 @@ export function registerExplorationTools(pi: ExtensionAPI) {
   pi.registerTool({
     name: "travel",
     label: "Travel",
-    description: "Travel between wasteland locations on the world map. Distance is in kilometers. May trigger random encounters with mutants, raiders, or other wasteland dangers along the way.\n\nStealth skill reduces encounter probability: ×(1.0 - stealth × 0.03).",
+    description: "Travel between wasteland locations on the world map. Distance is in kilometers. May trigger random encounters with mutants, raiders, or other wasteland dangers along the way.\n\nStealth skill reduces encounter probability: ×(1.0 - stealth × 0.03). Tracking skill gives chance to discover clues or supplies along the way.",
     parameters: Type.Object({
       db_path: Type.String({ description: "Path to game database" }),
       current_location: Type.String({ description: "Current location name" }),
       target_location: Type.String({ description: "Destination location name" }),
       stealth: Type.Optional(Type.Number({ description: "Stealth skill — reduces encounter chance" })),
+      tracking: Type.Optional(Type.Number({ description: "Tracking skill — chance to discover clues or supplies" })),
     }),
     async execute(_toolCallId, params) {
       const db = await openDB(params.db_path);
-      const result = travel(db, { current_location: params.current_location, target_location: params.target_location });
+      const result = travel(db, { current_location: params.current_location, target_location: params.target_location, stealth: params.stealth, tracking: params.tracking });
       saveDB(db, params.db_path);
       if (!result.success) return { content: [{ type: "text", text: `❌ ${result.error}` }], details: result, isError: true };
       const encLine = result.encounter.triggered ? `\n⚡ Encounter en route: ${result.encounter.description}` : "";
-      return { content: [{ type: "text", text: `🚶 Traveled ${result.distance_km}km from ${result.from} to ${result.to}.${encLine}` }], details: result };
+      const trackLine = result.tracking_discovery ? `\n🔍 Tracking discovery: ${result.tracking_detail}` : "";
+      return { content: [{ type: "text", text: `🚶 Traveled ${result.distance_km}km from ${result.from} to ${result.to}.${encLine}${trackLine}` }], details: result };
     },
   });
 
