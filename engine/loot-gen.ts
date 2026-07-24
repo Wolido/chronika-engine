@@ -2,12 +2,10 @@ import { generateWeapon } from "./weapon-gen.ts";
 
 export interface GenerateLootInput {
   tier: number;
-  enemy_type?: string;
-  db?: any;
 }
 
 export interface LootItemEntry {
-  type: "currency" | "material" | "item" | "weapon";
+  type: "currency" | "item" | "weapon";
   name: string;
   quantity: number;
   rarity?: string;
@@ -74,7 +72,7 @@ function rollRarity(tier: number): { rarity: string; success: boolean } {
       return { rarity: entry.rarity, success: true };
     }
   }
-  return { rarity: "common", success: true };
+  return { rarity: "common", success: true }; // Fallback for floating-point edge case
 }
 
 function pickRandom<T>(arr: T[]): T {

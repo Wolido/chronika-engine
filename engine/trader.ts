@@ -63,13 +63,12 @@ export function generateStock(input: GenerateStockInput): GenerateStockResult {
   const items: StockItem[] = [];
 
   // Try to get items from database (skip if db is null/undefined)
-  const dbItems = input.db ? input.db.exec("SELECT name, value, rarity FROM items WHERE value > 0") : [];
+  const dbItems = input.db ? input.db.exec("SELECT name, value FROM items WHERE value > 0") : [];
   const dbWeapons = input.db ? input.db.exec("SELECT name, value FROM weapons WHERE value > 0") : [];
 
   if (dbItems.length > 0 && dbItems[0].values.length > 0) {
     // Use database items
     const commonItems: StockItem[] = [];
-    const uncommonItems: StockItem[] = [];
 
     for (const row of dbItems[0].values) {
       const name = row[0] as string;

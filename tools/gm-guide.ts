@@ -147,7 +147,9 @@ skill_check 的 modifier 参数应基于玩家属性计算。
 - 掉落品质推荐（参考敌人强度）：
   - tier 1-2: 主 common/uncommon，rare 偶尔，legendary 极稀有
   - tier 3: 主 uncommon/rare，legendary 可能
-  - tier 4-5: 主 rare/legendary`,
+  - tier 4-5: 主 rare/legendary
+- 快速按敌人 tier 生成掉落：调 \`generate_loot(tier: N)\`
+- 自定义掉落表：调 \`loot(table: [...])\`,`
     exploration: `## 探索
 
 - 玩家说"看看周围" → 调 \`explore\`

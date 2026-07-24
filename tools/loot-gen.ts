@@ -6,9 +6,9 @@ export function registerLootGenTool(pi: ExtensionAPI) {
   pi.registerTool({
     name: "generate_loot",
     label: "Generate Loot",
-    description: "Generate complete loot from an enemy based on its tier. Always drops caps, with chances for materials, items, and weapons. Weapon rarity follows probability tables: lower tiers mostly common, higher tiers can drop legendary.",
+    description: "Generate complete loot from an enemy based on its tier. Always drops caps, with chances for consumable items and weapons. Weapon rarity follows probability tables: lower tiers mostly common, higher tiers can drop legendary.",
     parameters: Type.Object({
-      tier: Type.Number({ description: "Enemy tier 1-5" }),
+      tier: Type.Number({ description: "Enemy tier 1-5", minimum: 1, maximum: 5 }),
     }),
     async execute(_toolCallId, params) {
       const result = generateLoot({ tier: params.tier });
