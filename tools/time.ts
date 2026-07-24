@@ -7,7 +7,7 @@ import {
   startQuickTravel,
   checkTravelArrival,
   initGameTime,
-  getGameTime,
+  getFullTime,
 } from "../engine/time";
 
 /** Wrap a sql.js Database with a simple get/set interface backed by game_state table. */
@@ -153,7 +153,7 @@ export function registerTimeTools(pi: ExtensionAPI) {
     name: "game_time",
     label: "Game Time",
     description:
-      "Show the current game time (real time elapsed since the game started).",
+      "Show the current in-game date, time, day/night cycle, and elapsed play time. Use this to determine time of day for encounters, NPC schedules, and travel conditions.",
     parameters: Type.Object({
       db_path: Type.String({ description: "Path to game database" }),
     }),
@@ -166,19 +166,17 @@ export function registerTimeTools(pi: ExtensionAPI) {
       const sqlDb = new SQL.Database(buffer);
       const db = dbAdapter(sqlDb);
 
-      const elapsed = getGameTime(db);
+      const info = getFullTime(db);
       sqlDb.close();
 
-      const hours = Math.floor(elapsed / 3600000);
-      const minutes = Math.floor((elapsed % 3600000) / 60000);
       return {
         content: [
           {
             type: "text",
-            text: `⏰ Game time: ${hours}h ${minutes}m`,
+            text: `📅 ${info.year}-${String(info.month).padStart(2, "0")}-${String(info.day).padStart(2, "0")} ${String(info.hour).padStart(2, "0")}:${String(info.minute).padStart(2, "0")} (${info.day_of_week_name})\n⏰ Day ${info.day_number} — ${info.time_of_day}${info.is_night ? " 🌙" : " ☀️"}\nElapsed: ${info.elapsed_hours}h`,
           },
         ],
-        details: { elapsed_ms: elapsed },
+        details: info,
       };
     },
   });

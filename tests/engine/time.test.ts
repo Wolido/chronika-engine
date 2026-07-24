@@ -5,11 +5,13 @@ import {
   checkTravelArrival,
   initGameTime,
   getGameTime,
+  getFullTime,
 } from "../../engine/time.ts";
 import type {
   QuickTravelInput,
   QuickTravelResult,
   TravelStatus,
+  GameTimeInfo,
 } from "../../engine/time.ts";
 
 // ============================================================
@@ -258,3 +260,141 @@ describe("initGameTime / getGameTime", () => {
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
+
+// ============================================================
+// getFullTime tests
+// ============================================================
+
+describe("getFullTime", () => {
+  it("should return full date info with default start date (2250-01-01T08:00:00)", () => {
+    const db = fakeDb();
+    initGameTime(db);
+
+    const info = getFullTime(db);
+
+    // Basic fields should exist and have correct types
+    assert.strictEqual(info.year, 2250);
+    assert.strictEqual(info.month, 1);
+    assert.strictEqual(info.day, 1);
+    assert.strictEqual(info.hour, 8);
+    assert.strictEqual(info.minute, 0);
+    assert.strictEqual(info.day_of_week, 2);
+    assert.strictEqual(info.day_of_week_name, "Tuesday");
+    assert.strictEqual(info.day_number, 1);
+    assert.strictEqual(info.time_of_day, "早晨"); // 8am -> 早晨
+    assert.strictEqual(info.is_night, false);
+    assert.ok(typeof info.elapsed_ms === "number");
+    assert.ok(typeof info.elapsed_hours === "number");
+    assert.ok(typeof info.elapsed_days === "number");
+  });
+
+  it("should support custom start date via initGameTime", () => {
+    const db = fakeDb();
+    initGameTime(db, "2260-06-15T14:30:00");
+
+    const info = getFullTime(db);
+
+    assert.strictEqual(info.year, 2260);
+    assert.strictEqual(info.month, 6);
+    assert.strictEqual(info.day, 15);
+    assert.strictEqual(info.hour, 14);
+    assert.strictEqual(info.minute, 30);
+  });
+
+  it("should return night=true for nighttime hours", () => {
+    const db = fakeDb();
+    // Start at 2:00 AM — hour=2 maps to 夜间 (night)
+    initGameTime(db, "2250-01-01T02:00:00");
+
+    const info = getFullTime(db);
+
+    assert.strictEqual(info.hour, 2);
+    assert.strictEqual(info.time_of_day, "夜间");
+    assert.strictEqual(info.is_night, true);
+  });
+
+  it("should return night=true for 夜间 hours", () => {
+    const db = fakeDb();
+    initGameTime(db, "2250-01-01T20:00:00");
+
+    const info = getFullTime(db);
+
+    assert.strictEqual(info.hour, 20);
+    assert.strictEqual(info.time_of_day, "夜间");
+    assert.strictEqual(info.is_night, true);
+  });
+
+  it("should return default values when no start time is set", () => {
+    const db = fakeDb();
+    // No initGameTime call
+
+    const info = getFullTime(db);
+
+    assert.strictEqual(info.year, 2250);
+    assert.strictEqual(info.hour, 8);
+    assert.strictEqual(info.elapsed_ms, 0);
+    assert.strictEqual(info.day_number, 1);
+  });
+});
+
+// ============================================================
+// Defensive validation: checkTravelArrival with corrupt status
+// ============================================================
+
+describe("checkTravelArrival defensive checks", () => {
+  it("should not produce NaN when travel_status is missing arrives_at", () => {
+    // Arrange: travel_status exists but lacks arrives_at (corrupt state)
+    const db = fakeDb();
+    db.set("travel_status", { traveling: true, from: "A", to: "B" });
+
+    // Act
+    const status = checkTravelArrival(db);
+
+    // Assert: must not crash and must not produce NaN
+    assert.ok(
+      status.traveling === false || status.arrived === false,
+      `Expected traveling=false or arrived=false, got traveling=${status.traveling} arrived=${status.arrived}`,
+    );
+    assert.ok(
+      !Number.isNaN(status.remaining_minutes ?? 0),
+      `remaining_minutes should not be NaN, got ${status.remaining_minutes}`,
+    );
+  });
+});
+
+// ============================================================
+// Defensive validation: getFullTime with invalid date string
+// ============================================================
+
+describe("getFullTime defensive checks", () => {
+  it("should not crash or return NaN fields when game_start_date is invalid", () => {
+    // Arrange: valid real timestamp but corrupt date string
+    const db = fakeDb();
+    db.set("game_start_real", Date.now());
+    db.set("game_start_date", "not-a-date");
+
+    // Act
+    const info = getFullTime(db);
+
+    // Assert: all numeric date fields must be valid numbers (not NaN)
+    const numericFields: (keyof typeof info)[] = [
+      "year",
+      "month",
+      "day",
+      "hour",
+      "minute",
+      "day_of_week",
+      "day_number",
+      "elapsed_ms",
+      "elapsed_hours",
+      "elapsed_days",
+    ];
+    for (const field of numericFields) {
+      const value = info[field];
+      assert.ok(
+        typeof value === "number" && !Number.isNaN(value),
+        `Expected ${field} to be a valid number, got ${value}`,
+      );
+    }
+  });
+});

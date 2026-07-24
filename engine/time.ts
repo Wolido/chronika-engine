@@ -1,3 +1,19 @@
+export interface GameTimeInfo {
+  elapsed_ms: number;
+  elapsed_hours: number;
+  elapsed_days: number;
+  year: number;
+  month: number;
+  day: number;
+  hour: number;
+  minute: number;
+  day_of_week: number;
+  day_of_week_name: string;
+  time_of_day: string;
+  is_night: boolean;
+  day_number: number;
+}
+
 export interface QuickTravelInput {
   db: any;
   from: string;
@@ -59,7 +75,8 @@ export function startQuickTravel(input: QuickTravelInput): QuickTravelResult {
 export function checkTravelArrival(db: any): TravelStatus {
   const status = db.get("travel_status");
 
-  if (!status || !status.traveling) {
+  if (!status || !status.traveling || typeof status.arrives_at !== 'number' || Number.isNaN(status.arrives_at)) {
+    if (status) db.set("travel_status", null);
     return { traveling: false, arrived: false };
   }
 
@@ -92,12 +109,76 @@ export function checkTravelArrival(db: any): TravelStatus {
   };
 }
 
-export function initGameTime(db: any): void {
-  db.set("game_start_time", Date.now());
+const WEEKDAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const TIME_OF_DAY = [
+  { start: 5, label: "凌晨", night: false },
+  { start: 7, label: "早晨", night: false },
+  { start: 9, label: "上午", night: false },
+  { start: 12, label: "中午", night: false },
+  { start: 13, label: "下午", night: false },
+  { start: 17, label: "傍晚", night: false },
+  { start: 19, label: "夜间", night: true },
+  { start: 24, label: "夜间", night: true },
+];
+
+function getTimeOfDay(hour: number): { label: string; night: boolean } {
+  for (const period of TIME_OF_DAY) {
+    if (hour < period.start) {
+      const prev = TIME_OF_DAY[TIME_OF_DAY.indexOf(period) - 1] || TIME_OF_DAY[TIME_OF_DAY.length - 1];
+      return { label: prev.label, night: prev.night };
+    }
+  }
+  return { label: "夜间", night: true };
+}
+
+export function initGameTime(db: any, startDateStr?: string): void {
+  db.set("game_start_real", Date.now());
+  db.set("game_start_date", startDateStr || "2250-01-01T08:00:00");
 }
 
 export function getGameTime(db: any): number {
-  const startTime = db.get("game_start_time");
-  if (!startTime) return 0;
-  return Date.now() - startTime;
+  const startReal = db.get("game_start_real");
+  if (!startReal) return 0;
+  return Date.now() - startReal;
+}
+
+export function getFullTime(db: any): GameTimeInfo {
+  const startReal = db.get("game_start_real");
+  const startDateStr = db.get("game_start_date") || "2250-01-01T08:00:00";
+
+  if (!startReal) {
+    return {
+      elapsed_ms: 0, elapsed_hours: 0, elapsed_days: 0,
+      year: 2250, month: 1, day: 1, hour: 8, minute: 0,
+      day_of_week: 2, day_of_week_name: "Tuesday",
+      time_of_day: "早晨", is_night: false, day_number: 1,
+    };
+  }
+
+  const elapsed = Date.now() - startReal;
+  let startDate = new Date(startDateStr);
+  if (isNaN(startDate.getTime())) {
+    startDate = new Date("2250-01-01T08:00:00");
+  }
+  const currentDate = new Date(startDate.getTime() + elapsed);
+
+  const hour = currentDate.getHours();
+  const minute = currentDate.getMinutes();
+  const period = getTimeOfDay(hour);
+
+  return {
+    elapsed_ms: elapsed,
+    elapsed_hours: Math.round(elapsed / 360000) / 10,
+    elapsed_days: Math.floor(elapsed / 86400000),
+    year: currentDate.getFullYear(),
+    month: currentDate.getMonth() + 1,
+    day: currentDate.getDate(),
+    hour,
+    minute,
+    day_of_week: currentDate.getDay(),
+    day_of_week_name: WEEKDAY_NAMES[currentDate.getDay()],
+    time_of_day: period.label,
+    is_night: period.night,
+    day_number: Math.floor(elapsed / 86400000) + 1,
+  };
 }
