@@ -1,9 +1,11 @@
 {
   "name": "chronika-engine",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "description": "A data-driven text RPG engine for Pi",
-  "keywords": ["pi-package"],
+  "keywords": [
+    "pi-package"
+  ],
   "files": [
     "index.ts",
     "engine/",
@@ -13,7 +15,9 @@
     "README.md"
   ],
   "pi": {
-    "extensions": ["./index.ts"]
+    "extensions": [
+      "./index.ts"
+    ]
   },
   "dependencies": {
     "sql.js": "^1.14.1"
