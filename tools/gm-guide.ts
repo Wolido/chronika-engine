@@ -52,6 +52,10 @@ function getGMGuide(topic?: string): string {
 - 传奇武器应该让玩家兴奋——效果可以是离谱的、破坏平衡的。
 - 用 \`equip_item\` / \`unequip_item\` 管理玩家装备。
 - 用 \`equipment_stats\` 查看装备总属性。
+- 稀有度建议：
+  - common / uncommon: 普通敌人掉落、搜刮
+  - rare: 精英敌人、上锁容器、商人出售
+  - legendary: Boss、藏宝点、特殊剧情奖励
 
 ## 生存与成长
 
@@ -139,7 +143,11 @@ skill_check 的 modifier 参数应基于玩家属性计算。
 - 用 \`loot\` 工具按概率表生成掉落物。
 - 重要敌人或 boss 用 \`generate_weapon\` 生成武器掉落。
 - 普通敌人掉废铁、瓶盖、材料。
-- 传奇武器出现时，你负责给它起名和写描述。`,
+- 传奇武器出现时，你负责给它起名和写描述。
+- 掉落品质参考敌人强度：
+  - tier 1-2: common / uncommon
+  - tier 3: uncommon / rare
+  - tier 4-5: rare / legendary`,
     exploration: `## 探索
 
 - 玩家说"看看周围" → 调 \`explore\`
