@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
 export const DDL_STATEMENTS = `
 PRAGMA foreign_keys = ON;
@@ -217,5 +217,15 @@ CREATE TABLE IF NOT EXISTS location_encounters (
   description TEXT,
   probability REAL DEFAULT 0.3,
   monster_id INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS location_pois (
+  id INTEGER PRIMARY KEY,
+  location_name TEXT NOT NULL,
+  name TEXT NOT NULL,
+  description TEXT,
+  has_shelter INTEGER DEFAULT 0,
+  discovered INTEGER DEFAULT 0,
+  UNIQUE(location_name, name)
 );
 `;

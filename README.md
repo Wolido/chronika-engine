@@ -66,6 +66,8 @@ combat_resolve attacker: {stats: {strength: 8, agility: 5, endurance: 6, percept
 | `travel` | 在地点间移动 |
 | `explore` | 搜索当前地点 |
 | `get_map` | 查看地图 |
+| `discover_poi` | 发现地点内的 POI |
+| `move_to` | 在 POI 间移动 |
 
 ## 推荐启动命令
 

@@ -15,11 +15,15 @@ import {
   travel,
   explore,
   getKnownMap,
+  discoverPOI,
+  moveTo,
 } from "../../engine/exploration.ts";
 import type {
   DiscoverInput,
   TravelInput,
   ExploreInput,
+  DiscoverPOIInput,
+  MoveToInput,
 } from "../../engine/exploration.ts";
 
 // ---------------------------------------------------------------------------
@@ -53,6 +57,16 @@ CREATE TABLE IF NOT EXISTS location_encounters (
   description TEXT,
   probability REAL DEFAULT 0.3,
   monster_id INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS location_pois (
+  id INTEGER PRIMARY KEY,
+  location_name TEXT NOT NULL,
+  name TEXT NOT NULL,
+  description TEXT,
+  has_shelter INTEGER DEFAULT 0,
+  discovered INTEGER DEFAULT 0,
+  UNIQUE(location_name, name)
 );
 `;
 
@@ -366,6 +380,235 @@ describe("getKnownMap", () => {
     // Assert
     assert.deepStrictEqual(result.locations, []);
     assert.deepStrictEqual(result.connections, []);
+
+    db.close();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// discoverPOI
+// ---------------------------------------------------------------------------
+
+describe("discoverPOI", () => {
+  it("should add a POI to an existing location", async () => {
+    // Arrange
+    const db = await createDB();
+    db.run(
+      "INSERT INTO locations (name, description, discovered) VALUES (?, ?, ?)",
+      ["铁锈镇", "一个破旧的聚居地", 1]
+    );
+    const input: DiscoverPOIInput = {
+      location_name: "铁锈镇",
+      name: "老酒馆",
+      description: "满是灰尘与劣质酒精的避风港",
+      has_shelter: true,
+    };
+
+    // Act
+    const result = discoverPOI(db, input);
+
+    // Assert
+    assert.strictEqual(result.success, true);
+    assert.strictEqual(result.location, "铁锈镇");
+    assert.strictEqual(result.poi, "老酒馆");
+    assert.strictEqual(result.total_pois, 1);
+
+    db.close();
+  });
+
+  it("should fail when POI name already exists in the location", async () => {
+    // Arrange
+    const db = await createDB();
+    db.run(
+      "INSERT INTO locations (name, description, discovered) VALUES (?, ?, ?)",
+      ["铁锈镇", "一个破旧的聚居地", 1]
+    );
+    db.run(
+      "INSERT INTO location_pois (location_name, name, description, discovered) VALUES (?, ?, ?, ?)",
+      ["铁锈镇", "老酒馆", "原有酒馆", 1]
+    );
+    const input: DiscoverPOIInput = {
+      location_name: "铁锈镇",
+      name: "老酒馆",
+      description: "重复描述",
+    };
+
+    // Act
+    const result = discoverPOI(db, input);
+
+    // Assert
+    assert.strictEqual(result.success, false);
+    assert.ok(
+      result.error && result.error.toLowerCase().includes("already exists"),
+      `Expected error to include "already exists", got: ${result.error}`
+    );
+
+    db.close();
+  });
+
+  it("should fail when location does not exist", async () => {
+    // Arrange
+    const db = await createDB();
+    const input: DiscoverPOIInput = {
+      location_name: "不存在的地点",
+      name: "老酒馆",
+      description: "无处安放",
+    };
+
+    // Act
+    const result = discoverPOI(db, input);
+
+    // Assert
+    assert.strictEqual(result.success, false);
+    assert.ok(
+      result.error && result.error.length > 0,
+      `Expected non-empty error for missing location, got: ${result.error}`
+    );
+
+    db.close();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// moveTo
+// ---------------------------------------------------------------------------
+
+describe("moveTo", () => {
+  it("should move to another POI in the same location", async () => {
+    // Arrange
+    const db = await createDB();
+    db.run(
+      "INSERT INTO locations (name, description, discovered, visited) VALUES (?, ?, ?, ?)",
+      ["东部废墟", "坍塌的高楼", 1, 1]
+    );
+    db.run(
+      "INSERT INTO location_pois (location_name, name, description, discovered) VALUES (?, ?, ?, ?), (?, ?, ?, ?)",
+      ["东部废墟", "入口", "破碎的大门", 1, "东部废墟", "地下仓库", "堆满杂物的地下室", 1]
+    );
+    const input: MoveToInput = {
+      location_name: "东部废墟",
+      target_poi: "地下仓库",
+    };
+
+    // Act
+    const result = moveTo(db, input);
+
+    // Assert
+    assert.strictEqual(result.success, true);
+    assert.strictEqual(result.location, "东部废墟");
+    assert.strictEqual(result.poi, "地下仓库");
+    assert.deepStrictEqual(result.pois_available.sort(), ["入口", "地下仓库"].sort());
+
+    db.close();
+  });
+
+  it("should fail when target POI does not exist", async () => {
+    // Arrange
+    const db = await createDB();
+    db.run(
+      "INSERT INTO locations (name, description, discovered, visited) VALUES (?, ?, ?, ?)",
+      ["东部废墟", "坍塌的高楼", 1, 1]
+    );
+    db.run(
+      "INSERT INTO location_pois (location_name, name, description, discovered) VALUES (?, ?, ?, ?)",
+      ["东部废墟", "入口", "破碎的大门", 1]
+    );
+    const input: MoveToInput = {
+      location_name: "东部废墟",
+      target_poi: "不存在的POI",
+    };
+
+    // Act
+    const result = moveTo(db, input);
+
+    // Assert
+    assert.strictEqual(result.success, false);
+    assert.ok(
+      result.error && result.error.toLowerCase().includes("not found"),
+      `Expected error to include "not found", got: ${result.error}`
+    );
+
+    db.close();
+  });
+
+  it("should fail when location has no POIs", async () => {
+    // Arrange
+    const db = await createDB();
+    db.run(
+      "INSERT INTO locations (name, description, discovered, visited) VALUES (?, ?, ?, ?)",
+      ["空地点", "什么都没有", 1, 1]
+    );
+    const input: MoveToInput = {
+      location_name: "空地点",
+      target_poi: "任意",
+    };
+
+    // Act
+    const result = moveTo(db, input);
+
+    // Assert
+    assert.strictEqual(result.success, false);
+    assert.ok(
+      result.error && result.error.length > 0,
+      `Expected non-empty error for location without POIs, got: ${result.error}`
+    );
+
+    db.close();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// explore POIs
+// ---------------------------------------------------------------------------
+
+describe("explore POIs", () => {
+  it("should include the list of POIs for a location that has POIs", async () => {
+    // Arrange
+    const db = await createDB();
+    db.run(
+      "INSERT INTO locations (name, description, danger_level, has_shelter, discovered) VALUES (?, ?, ?, ?, ?)",
+      ["东部废墟", "坍塌的高楼", 3, 0, 1]
+    );
+    db.run(
+      "INSERT INTO location_pois (location_name, name, description, discovered) VALUES (?, ?, ?, ?), (?, ?, ?, ?)",
+      ["东部废墟", "入口", "破碎的大门", 1, "东部废墟", "地下仓库", "堆满杂物的地下室", 0]
+    );
+    const input: ExploreInput = { location_name: "东部废墟" };
+
+    // Act
+    const result = explore(db, input);
+
+    // Assert
+    assert.ok(Array.isArray(result.pois));
+    assert.strictEqual(result.pois.length, 2);
+    assert.ok(
+      result.pois.every(
+        (p) =>
+          typeof p.name === "string" &&
+          typeof p.description === "string" &&
+          typeof p.discovered === "boolean"
+      ),
+      `Expected POIs to have name, description, and discovered fields, got: ${JSON.stringify(result.pois)}`
+    );
+
+    db.close();
+  });
+
+  it("should return an empty POI list for a location without POIs", async () => {
+    // Arrange
+    const db = await createDB();
+    db.run(
+      "INSERT INTO locations (name, description, danger_level, has_shelter, discovered) VALUES (?, ?, ?, ?, ?)",
+      ["东部废墟", "坍塌的高楼", 3, 0, 1]
+    );
+    const input: ExploreInput = { location_name: "东部废墟" };
+
+    // Act
+    const result = explore(db, input);
+
+    // Assert
+    assert.ok(Array.isArray(result.pois));
+    assert.deepStrictEqual(result.pois, []);
 
     db.close();
   });

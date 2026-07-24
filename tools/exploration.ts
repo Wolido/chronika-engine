@@ -3,7 +3,7 @@ import { Type } from "typebox";
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { getSQL } from "../db/connection";
-import { discoverLocation, travel, explore, getKnownMap } from "../engine/exploration";
+import { discoverLocation, travel, explore, getKnownMap, discoverPOI, moveTo } from "../engine/exploration";
 
 function resolvePath(p: string): string {
   if (p.startsWith("/")) return p;
@@ -82,7 +82,46 @@ export function registerExplorationTools(pi: ExtensionAPI) {
       if (result.error) return { content: [{ type: "text", text: `❌ ${result.error}` }], details: result, isError: true };
       const shelterLine = result.has_shelter ? "\n🏠 Has shelter (safe to rest)" : "";
       const discLines = result.discoveries.length > 0 ? `\n\n**Discoveries:**\n${result.discoveries.map(d => `  • ${d}`).join("\n")}` : "";
-      return { content: [{ type: "text", text: `📍 **${result.location_name}** (danger level: ${result.danger_level})${shelterLine}\n${result.description}${discLines}` }], details: result };
+      const poiLines = result.pois.length > 0 ? `\n\n**Points of Interest:**\n${result.pois.map(p => `  • ${p.name}${p.discovered ? "" : " (undiscovered)"}`).join("\n")}` : "";
+      return { content: [{ type: "text", text: `📍 **${result.location_name}** (danger level: ${result.danger_level})${shelterLine}\n${result.description}${discLines}${poiLines}` }], details: result };
+    },
+  });
+
+  pi.registerTool({
+    name: "discover_poi",
+    label: "Discover POI",
+    description: "Discover a new point of interest within a location (a room, building, landmark, etc.). NOT for discovering new map locations — use discover_location for that.",
+    parameters: Type.Object({
+      db_path: Type.String({ description: "Path to game database" }),
+      location_name: Type.String({ description: "Parent location" }),
+      name: Type.String({ description: "POI name" }),
+      description: Type.String({ description: "POI description" }),
+      has_shelter: Type.Optional(Type.Boolean({ description: "Can rest here" })),
+    }),
+    async execute(_toolCallId, params) {
+      const db = await openDB(params.db_path);
+      const result = discoverPOI(db, params);
+      saveDB(db, params.db_path);
+      if (!result.success) return { content: [{ type: "text", text: `❌ ${result.error}` }], details: result, isError: true };
+      return { content: [{ type: "text", text: `📍 Discovered "${result.poi}" in ${result.location}. Total POIs: ${result.total_pois}` }], details: result };
+    },
+  });
+
+  pi.registerTool({
+    name: "move_to",
+    label: "Move To",
+    description: "Move to a different point of interest within the current location. Free action with no travel time or encounter risk.",
+    parameters: Type.Object({
+      db_path: Type.String({ description: "Path to game database" }),
+      location_name: Type.String({ description: "Current location" }),
+      target_poi: Type.String({ description: "Target POI" }),
+    }),
+    async execute(_toolCallId, params) {
+      const db = await openDB(params.db_path);
+      const result = moveTo(db, { location_name: params.location_name, target_poi: params.target_poi });
+      db.close();
+      if (!result.success) return { content: [{ type: "text", text: `❌ ${result.error}` }], details: result, isError: true };
+      return { content: [{ type: "text", text: `🚶 Moved to "${result.poi}" in ${result.location}.\nAvailable POIs: ${result.pois_available.join(", ")}` }], details: result };
     },
   });
 

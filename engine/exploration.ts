@@ -141,15 +141,17 @@ export interface ExploreResult {
   description: string;
   danger_level: number;
   has_shelter: boolean;
+  pois: { name: string; description: string; discovered: boolean }[];
   discoveries: string[];
   encounter?: TravelEncounter;
+  current_poi?: string;
   error?: string;
 }
 
 export function explore(db: any, input: ExploreInput): ExploreResult {
   const locResult = db.exec(`SELECT description, danger_level, has_shelter FROM locations WHERE name = '${input.location_name}'`);
   if (locResult.length === 0 || locResult[0].values.length === 0) {
-    return { location_name: input.location_name, description: "", danger_level: 0, has_shelter: false, discoveries: [], error: `Location "${input.location_name}" not found` };
+    return { location_name: input.location_name, description: "", danger_level: 0, has_shelter: false, pois: [], discoveries: [], error: `Location "${input.location_name}" not found` };
   }
 
   const row = locResult[0];
@@ -161,6 +163,15 @@ export function explore(db: any, input: ExploreInput): ExploreResult {
   const encResult = db.exec(`SELECT encounter_type, description, probability FROM location_encounters WHERE location_name = '${input.location_name}'`);
   const discoveries: string[] = [];
   let encounter: TravelEncounter | undefined;
+
+  // Query POIs
+  const poiResult = db.exec(`SELECT name, description, discovered FROM location_pois WHERE location_name = '${input.location_name}' ORDER BY name`);
+  const pois: { name: string; description: string; discovered: boolean }[] = [];
+  for (const r of poiResult) {
+    for (const v of r.values) {
+      pois.push({ name: v[0] as string, description: v[1] as string, discovered: (v[2] as number) === 1 });
+    }
+  }
 
   for (const encRow of encResult) {
     for (const val of encRow.values) {
@@ -177,7 +188,7 @@ export function explore(db: any, input: ExploreInput): ExploreResult {
     if (encounter?.triggered) break;
   }
 
-  return { location_name: input.location_name, description, danger_level: dangerLevel, has_shelter: hasShelter === 1, discoveries, encounter };
+  return { location_name: input.location_name, description, danger_level: dangerLevel, has_shelter: hasShelter === 1, pois, discoveries, encounter };
 }
 
 // ---------------------------------------------------------------------------
@@ -222,4 +233,70 @@ export function getKnownMap(db: any, currentLocation?: string): MapResult {
   }
 
   return { locations, connections, current_location: currentLocation };
+}
+
+// ---------------------------------------------------------------------------
+// POI (Points of Interest)
+// ---------------------------------------------------------------------------
+
+export interface DiscoverPOIInput {
+  location_name: string;
+  name: string;
+  description: string;
+  has_shelter?: boolean;
+}
+
+export interface DiscoverPOIResult {
+  success: boolean;
+  location: string;
+  poi: string;
+  total_pois: number;
+  error?: string;
+}
+
+export interface MoveToInput {
+  location_name: string;
+  target_poi: string;
+}
+
+export interface MoveToResult {
+  success: boolean;
+  location: string;
+  poi: string;
+  pois_available: string[];
+  error?: string;
+}
+
+export function discoverPOI(db: any, input: DiscoverPOIInput): DiscoverPOIResult {
+  const locResult = db.exec(`SELECT name FROM locations WHERE name = '${input.location_name}'`);
+  if (locResult.length === 0 || locResult[0].values.length === 0) {
+    return { success: false, location: input.location_name, poi: input.name, total_pois: 0, error: `Location "${input.location_name}" not found` };
+  }
+
+  const existingResult = db.exec(`SELECT name FROM location_pois WHERE location_name = '${input.location_name}' AND name = '${input.name}'`);
+  if (existingResult.length > 0 && existingResult[0].values.length > 0) {
+    return { success: false, location: input.location_name, poi: input.name, total_pois: 0, error: `POI "${input.name}" already exists in "${input.location_name}"` };
+  }
+
+  db.run("INSERT INTO location_pois (location_name, name, description, has_shelter, discovered) VALUES (?, ?, ?, ?, 1)", [input.location_name, input.name, input.description, input.has_shelter ? 1 : 0]);
+
+  const countResult = db.exec(`SELECT COUNT(*) as c FROM location_pois WHERE location_name = '${input.location_name}' AND discovered = 1`);
+  const total = countResult[0]?.values[0]?.[0] ?? 1;
+
+  return { success: true, location: input.location_name, poi: input.name, total_pois: total as number };
+}
+
+export function moveTo(db: any, input: MoveToInput): MoveToResult {
+  const poiResult = db.exec(`SELECT name FROM location_pois WHERE location_name = '${input.location_name}' AND name = '${input.target_poi}'`);
+  if (poiResult.length === 0 || poiResult[0].values.length === 0) {
+    // Check if location has any POIs at all
+    const anyPoiResult = db.exec(`SELECT name FROM location_pois WHERE location_name = '${input.location_name}'`);
+    const available = anyPoiResult.length > 0 ? anyPoiResult[0].values.map(v => v[0] as string) : [];
+    return { success: false, location: input.location_name, poi: input.target_poi, pois_available: available, error: `POI "${input.target_poi}" not found in "${input.location_name}"` };
+  }
+
+  const allPoisResult = db.exec(`SELECT name FROM location_pois WHERE location_name = '${input.location_name}' AND discovered = 1`);
+  const allPois = allPoisResult.length > 0 ? allPoisResult[0].values.map(v => v[0] as string) : [];
+
+  return { success: true, location: input.location_name, poi: input.target_poi, pois_available: allPois };
 }
