@@ -14,7 +14,15 @@ pi install npm:chronika-engine
 
 ## 快速开始
 
-配置一个独立的 Pi 启动别名，专用于 Chronika 游戏环境：
+安装完成后直接运行：
+
+```bash
+pi
+```
+
+输入 `开玩` 即可开始游戏。之后直接用自然语言与 GM 交互。
+
+如果需要隔离游戏环境（不加载 skills、context files 等），可以配置一个独立的启动别名：
 
 ```bash
 alias pg='pi \
@@ -32,13 +40,7 @@ get_encounter,gm_guide \
   --no-skills --no-context-files'
 ```
 
-然后运行：
-
-```bash
-pg
-```
-
-输入 `开玩` 即可开始游戏。之后直接用自然语言与 GM 交互。
+然后运行 `pg` 即可。
 
 ---
 
