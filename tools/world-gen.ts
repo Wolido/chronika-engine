@@ -19,7 +19,14 @@ export function registerWorldGenTool(pi: ExtensionAPI) {
   pi.registerTool({
     name: "world_gen",
     label: "World Gen",
-    description: "Generate a complete wasteland world database with weapons, monsters, items, status effects, and actions. Designed for a post-apocalyptic survival RPG setting. All entities are validated before writing. If any validation fails, nothing is written. Weapons include makeshift melee and rare firearms. Monsters include mutants, beasts, and hostile survivors.",
+    description: "Generate a complete wasteland world database with weapons, monsters, items, status effects, and actions. Designed for a post-apocalyptic survival RPG setting. All entities are validated before writing. If any validation fails, nothing is written.\n\n"
+      + "Required fields per entity type:\n"
+      + "WEAPON: name, category (melee/ranged/thrown/explosive), damage_type (slashing/piercing/bludgeoning/thermal/explosive/chemical), damage_min, damage_max, accuracy (0-1), tier (1-5), rarity (common/uncommon/rare/legendary)\n"
+      + "MONSTER: name, category (beast/mutant/humanoid/mechanical/abomination), hp, damage_min, damage_max, accuracy (0-1), evasion (0-1), armor, tier (1-5), xp_reward, ALL 6 attributes: strength, agility, endurance, perception, intelligence, willpower (1-20 each)\n"
+      + "ITEM: name, item_type (consumable/material/armor/misc), rarity (common/uncommon/rare/legendary), value\n"
+      + "  Note: 'material' type items have no gameplay use yet - avoid creating them.\n"
+      + "STATUS_EFFECT: name, effect_type (buff/debuff/dot/hot/stun/root), magnitude, duration\n"
+      + "ACTION: name, action_type (combat/social/exploration/craft/survival), primary_attr (strength/agility/endurance/perception/intelligence/willpower/survival/medicine/mechanics/barter/persuade/stealth/locksmith/tracking), difficulty (1-30), success_result (JSON), failure_result (JSON)",
     parameters: Type.Object({
       db_path: Type.String({ description: "Path to the SQLite database file (will be created if doesn't exist)" }),
       world_meta: Type.Optional(Type.Object({
