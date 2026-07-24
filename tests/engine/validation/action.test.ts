@@ -233,7 +233,7 @@ describe("validateAction", () => {
       const action = validAction({
         name: "说服守卫",
         action_type: "social",
-        primary_attr: "charisma",
+        primary_attr: "barter",
         difficulty: 10,
         cooldown: 0,
         success_result: "守卫被说服，允许通行",

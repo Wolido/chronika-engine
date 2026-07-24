@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 6;
+export const SCHEMA_VERSION = 7;
 
 export const DDL_STATEMENTS = `
 PRAGMA foreign_keys = ON;
@@ -26,7 +26,6 @@ CREATE TABLE IF NOT EXISTS characters (
   perception    INTEGER DEFAULT 5,
   intelligence  INTEGER DEFAULT 5,
   willpower     INTEGER DEFAULT 5,
-  charisma      INTEGER DEFAULT 5,
   persuasion    INTEGER DEFAULT 5,
   survival      INTEGER DEFAULT 5,
   medicine      INTEGER DEFAULT 5,

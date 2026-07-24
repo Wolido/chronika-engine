@@ -25,9 +25,12 @@ export interface ValidationResult {
 const VALID_ACTION_TYPES: readonly string[] = ["combat", "social", "exploration", "craft", "survival"];
 
 const VALID_PRIMARY_ATTRS: readonly string[] = [
+  // 属性
   "strength", "agility", "endurance", "perception",
-  "intelligence", "willpower", "charisma", "persuasion",
-  "survival", "medicine", "mechanics",
+  "intelligence", "willpower",
+  // 技能
+  "survival", "medicine", "mechanics", "barter",
+  "persuade", "stealth", "locksmith", "tracking",
 ];
 
 export function validateAction(action: ActionData): ValidationResult {

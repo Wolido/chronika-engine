@@ -53,7 +53,7 @@ describe("DDL_STATEMENTS", () => {
 });
 
 describe("SCHEMA_VERSION", () => {
-  it("should be 6", () => {
-    assert.strictEqual(SCHEMA_VERSION, 6);
+  it("should be 7", () => {
+    assert.strictEqual(SCHEMA_VERSION, 7);
   });
 });
