@@ -19,10 +19,7 @@ export interface GenerateStockResult {
 
 const DEFAULT_ITEMS: Record<string, { name: string; value: number }[]> = {
   common: [
-    { name: "废铁", value: 3 },
-    { name: "布料", value: 2 },
     { name: "瓶盖", value: 1 },
-    { name: "螺栓", value: 4 },
   ],
   uncommon: [
     { name: "治疗粉", value: 15 },

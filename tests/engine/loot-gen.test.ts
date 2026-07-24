@@ -93,21 +93,21 @@ describe("generateLoot", () => {
     }
   });
 
-  // --- 测试 4: 掉落中包含材料时数量为正数 ----------------------------
+  // --- 测试 4: 掉落中包含物品时数量为正数 ----------------------------
 
-  it("should drop materials with positive quantity", () => {
-    // 用高 tier 提高材料掉落概率，跑多次来收集材料
+  it("should drop items with positive quantity", () => {
+    // 用高 tier 提高物品掉落概率，跑多次来收集物品
     const results = runMany(tier5Input(), 30);
 
-    const allMaterials = results.flatMap(r =>
-      r.items.filter(item => item.type === "material"),
+    const allItems = results.flatMap(r =>
+      r.items.filter(item => item.type === "item"),
     );
 
-    // 如果材料掉落了，数量必须 > 0
-    for (const mat of allMaterials) {
+    // 如果物品掉落了，数量必须 > 0
+    for (const it of allItems) {
       assert.ok(
-        mat.quantity > 0,
-        `material "${mat.name}" has non-positive quantity: ${mat.quantity}`,
+        it.quantity > 0,
+        `item "${it.name}" has non-positive quantity: ${it.quantity}`,
       );
     }
   });

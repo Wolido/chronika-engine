@@ -58,7 +58,6 @@ const RARITY_TABLE: Record<number, { rarity: string; chance: number }[]> = {
   ],
 };
 
-const DEFAULT_MATERIALS = ["废铁", "布料", "螺栓", "玻璃"];
 const DEFAULT_ITEMS = ["治疗粉", "净水", "罐头"];
 
 function rollBetween(min: number, max: number): number {
@@ -92,19 +91,8 @@ export function generateLoot(input: GenerateLootInput): GenerateLootResult {
   items.push({ type: "currency", name: "瓶盖", quantity: currencyAmount });
   rolls.push({ category: "currency", success: true, detail: `${currencyAmount} caps` });
 
-  // 2. Materials (概率随 tier 增加)
-  const materialChance = 0.5 + tier * 0.08;
-  if (Math.random() < materialChance) {
-    const matQty = rollBetween(1, tier + 1);
-    const matName = pickRandom(DEFAULT_MATERIALS);
-    items.push({ type: "material", name: matName, quantity: matQty });
-    rolls.push({ category: "material", success: true, detail: `${matName} ×${matQty}` });
-  } else {
-    rolls.push({ category: "material", success: false });
-  }
-
-  // 3. Items (概率随 tier 增加)
-  const itemChance = 0.2 + tier * 0.1;
+  // 2. Items (概率随 tier 增加)
+  const itemChance = 0.3 + tier * 0.12;
   if (Math.random() < itemChance) {
     const itemName = pickRandom(DEFAULT_ITEMS);
     items.push({ type: "item", name: itemName, quantity: 1 });
@@ -113,8 +101,8 @@ export function generateLoot(input: GenerateLootInput): GenerateLootResult {
     rolls.push({ category: "item", success: false });
   }
 
-  // 4. Weapon (概率随 tier 增加，带稀有度表)
-  const weaponChance = 0.1 + tier * 0.1;
+  // 3. Weapon (概率随 tier 增加，带稀有度表)
+  const weaponChance = 0.15 + tier * 0.1;
   if (Math.random() < weaponChance) {
     const rarityResult = rollRarity(tier);
     const weapon = generateWeapon({
