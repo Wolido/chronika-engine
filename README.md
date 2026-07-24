@@ -26,27 +26,6 @@ pi install npm:chronika-engine
 
 为 Pi 框架配置一个独立的启动状态，专用于运行 Chronika 游戏环境。不加载任何 skills 或额外的系统提示词。
 
-**Fish shell：**
-
-```fish
-abbr --add pg "pi \
-  --tools read,ls,grep,find,bash,subagent,\
-dice,db_query,db_exec,init_db,world_gen,\
-skill_check,combat_resolve,loot,\
-consume,craft,trade,\
-status_apply,status_tick,\
-level_up,legendary_gen,generate_weapon,\
-equip_item,unequip_item,equipment_stats,\
-log_event,get_history,\
-discover_location,travel,explore,get_map,\
-discover_poi,move_to,\
-get_encounter,gm_guide \
-  --no-skills --no-context-files \
-  --model deepseek-v4-flash"
-```
-
-**Bash / Zsh：**
-
 ```bash
 alias pg='pi \
   --tools read,ls,grep,find,bash,subagent,\
@@ -60,8 +39,7 @@ log_event,get_history,\
 discover_location,travel,explore,get_map,\
 discover_poi,move_to,\
 get_encounter,gm_guide \
-  --no-skills --no-context-files \
-  --model deepseek-v4-flash'
+  --no-skills --no-context-files'
 ```
 
 ## 工具列表（29 个）
