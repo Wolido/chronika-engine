@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 7;
+export const SCHEMA_VERSION = 8;
 
 export const DDL_STATEMENTS = `
 PRAGMA foreign_keys = ON;
@@ -235,5 +235,21 @@ CREATE TABLE IF NOT EXISTS poi_connections (
   to_poi TEXT,
   to_location TEXT,
   description TEXT
+);
+
+CREATE TABLE IF NOT EXISTS quests (
+  id INTEGER PRIMARY KEY,
+  title TEXT NOT NULL,
+  description TEXT,
+  quest_type TEXT NOT NULL,
+  giver_npc TEXT,
+  target_location TEXT,
+  reward_credits INTEGER DEFAULT 0,
+  reward_item_name TEXT,
+  reward_weapon_name TEXT,
+  time_limit_minutes INTEGER,
+  status TEXT DEFAULT 'active',
+  accepted_at TEXT DEFAULT (datetime('now')),
+  completed_at TEXT
 );
 `;

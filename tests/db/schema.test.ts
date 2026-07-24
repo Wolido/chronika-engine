@@ -24,15 +24,16 @@ describe("DDL_STATEMENTS", () => {
     "location_encounters",
     "location_pois",
     "poi_connections",
+    "quests",
   ];
 
-  it("should contain exactly 20 CREATE TABLE statements", () => {
+  it("should contain exactly 21 CREATE TABLE statements", () => {
     const matches = DDL_STATEMENTS.match(/CREATE TABLE IF NOT EXISTS\s+(\w+)/g);
     assert.ok(matches, "DDL_STATEMENTS should contain CREATE TABLE statements");
-    assert.strictEqual(matches!.length, 20, `expected 20 CREATE TABLE, got ${matches!.length}`);
+    assert.strictEqual(matches!.length, 21, `expected 21 CREATE TABLE, got ${matches!.length}`);
   });
 
-  it("should create all 20 expected tables", () => {
+  it("should create all 21 expected tables", () => {
     for (const table of expectedTables) {
       const re = new RegExp(`CREATE TABLE IF NOT EXISTS\\s+${table}\\b`);
       assert.ok(re.test(DDL_STATEMENTS), `DDL should include table '${table}'`);
@@ -53,7 +54,7 @@ describe("DDL_STATEMENTS", () => {
 });
 
 describe("SCHEMA_VERSION", () => {
-  it("should be 7", () => {
-    assert.strictEqual(SCHEMA_VERSION, 7);
+  it("should be 8", () => {
+    assert.strictEqual(SCHEMA_VERSION, 8);
   });
 });
