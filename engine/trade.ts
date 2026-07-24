@@ -10,7 +10,6 @@ export interface TradeInput {
   mode: "buy" | "sell";
   price_modifier?: number;
   barter?: number;
-  persuade?: number;
 }
 
 export interface TradeResult {
@@ -28,9 +27,6 @@ export function trade(input: TradeInput): TradeResult {
   let skillMod = 0;
   if (input.barter) {
     skillMod += input.mode === "buy" ? -input.barter * 0.02 : input.barter * 0.02;
-  }
-  if (input.persuade) {
-    skillMod += input.mode === "buy" ? -input.persuade * 0.01 : input.persuade * 0.01;
   }
   const finalModifier = modifier + skillMod;
   const totalCost = Math.round(

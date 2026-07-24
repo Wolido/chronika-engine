@@ -18,7 +18,6 @@ export function registerTradeTool(pi: ExtensionAPI) {
       mode: StringEnum(["buy", "sell"] as const, { description: "Buy or sell mode" }),
       price_modifier: Type.Optional(Type.Number({ description: "Price modifier (default 1.0)" })),
       barter: Type.Optional(Type.Number({ description: "Barter skill: -2% buy price, +2% sell price per point." })),
-      persuade: Type.Optional(Type.Number({ description: "Persuade skill: ±1% per point, stacks with barter." })),
     }),
     async execute(_toolCallId, params) {
       const result = trade(params);
