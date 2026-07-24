@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 export const DDL_STATEMENTS = `
 PRAGMA foreign_keys = ON;
@@ -189,5 +189,33 @@ CREATE TABLE IF NOT EXISTS generated_weapons (
   current_ammo    INTEGER,
   owner_id        INTEGER,
   created_at      TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS locations (
+  id INTEGER PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE,
+  region TEXT,
+  description TEXT,
+  danger_level INTEGER DEFAULT 1,
+  has_shelter INTEGER DEFAULT 0,
+  discovered INTEGER DEFAULT 0,
+  visited INTEGER DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS location_connections (
+  id INTEGER PRIMARY KEY,
+  from_location TEXT NOT NULL,
+  to_location TEXT NOT NULL,
+  distance_km REAL DEFAULT 1,
+  description TEXT
+);
+
+CREATE TABLE IF NOT EXISTS location_encounters (
+  id INTEGER PRIMARY KEY,
+  location_name TEXT NOT NULL,
+  encounter_type TEXT NOT NULL,
+  description TEXT,
+  probability REAL DEFAULT 0.3,
+  monster_id INTEGER
 );
 `;

@@ -3,15 +3,17 @@
 ## [Unreleased]
 
 ### Added
+- 探索/地图系统：discover_location / travel / explore / get_map
+- 数据库新增 3 张表：locations / location_connections / location_encounters
+- 地图从 3-5 个初始节点开始，随游戏进行自动扩张
 - 事件日志系统：log_event / get_history（持久化游戏历史记录）
-- 启动通知：`⚙️ Chronika Engine loaded` 提示
-- README.md 文档（安装、启动命令、工具列表、开发流程）
+- 启动通知：`⚙️ Chronika Engine loaded`
+- README.md 文档
 - 版本控制（git + .gitignore）
 
 ### Changed
-- 项目结构重构为 npm 包格式，通过 `pi install` 安装
+- 项目结构重构为 npm 包格式
 - 源码从 `.pi/extensions/` 迁移至包根目录
-- 测试 import 路径更新为新的目录结构
 
 ## [0.1.0] - 2025-01-18
 
@@ -24,5 +26,5 @@
 - 状态效果：status_apply / status_tick
 - 角色成长：skill_check / level_up
 - 传奇特效：legendary_gen
-- 数据库 Schema：15 张表
-- 测试覆盖：199 个测试用例
+- 数据库 Schema：18 张表
+- 测试覆盖：210 个测试用例

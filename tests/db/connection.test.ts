@@ -16,7 +16,7 @@ describe("getSQL", () => {
     assert.strictEqual(typeof SQL.Database, "function", "SQL.Database should be a function");
   });
 
-  it("should create an in-memory database, run DDL, and verify all 15 tables exist", () => {
+  it("should create an in-memory database, run DDL, and verify all 18 tables exist", () => {
     const db = new SQL.Database();
     db.run("PRAGMA foreign_keys = ON");
     db.run(DDL_STATEMENTS);
@@ -38,6 +38,9 @@ describe("getSQL", () => {
       "inventory",
       "items",
       "legendary_effects",
+      "location_connections",
+      "location_encounters",
+      "locations",
       "monsters",
       "plugin_registry",
       "status_effects",

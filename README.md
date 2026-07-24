@@ -60,6 +60,12 @@ combat_resolve attacker: {stats: {strength: 8, agility: 5, endurance: 6, percept
 | `status_tick` | 每回合状态结算 |
 | `level_up` | 升级系统 |
 | `legendary_gen` | 传奇特效生成 |
+| `log_event` | 记录游戏事件到历史 |
+| `get_history` | 查询游戏历史记录 |
+| `discover_location` | 发现新地点 |
+| `travel` | 在地点间移动 |
+| `explore` | 搜索当前地点 |
+| `get_map` | 查看地图 |
 
 ## 推荐启动命令
 

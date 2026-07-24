@@ -13,6 +13,7 @@ import { registerLevelUpTool } from "./tools/level-up";
 import { registerLegendaryGenTool } from "./tools/legendary-gen";
 import { registerEquipTools } from "./tools/equip";
 import { registerEventLogTools } from "./tools/event-log";
+import { registerExplorationTools } from "./tools/exploration";
 
 export default function (pi: ExtensionAPI) {
   registerDiceTool(pi);
@@ -29,6 +30,7 @@ export default function (pi: ExtensionAPI) {
   registerLegendaryGenTool(pi);
   registerEquipTools(pi);
   registerEventLogTools(pi);
+  registerExplorationTools(pi);
 
   pi.on("session_start", async (_event, ctx) => {
     ctx.ui.notify("⚙️ Chronika Engine loaded", "info");
