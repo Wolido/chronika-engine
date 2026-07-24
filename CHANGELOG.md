@@ -4,7 +4,31 @@
 
 ### Added
 
-- （暂无）
+- 任务系统：create_quest / active_quests / complete_quest（4 种任务类型，含时间限制和奖励）
+- 完整掉落生成：generate_loot（按敌人 tier 自动产出货币+物品+武器，内置稀有度概率表）
+- NPC 库存生成：generate_stock（按 NPC 类型 villager/scavenger/trader/merchant 生成库存）
+- 玩家自选 loot：take_loot（选择要拿的物品写入背包，其余留在原地）
+- 时间系统：快速移动（quick_travel / check_arrival，真实时间等待）
+- 完整日期/昼夜系统（2500 年起始，年月日时分秒星期 + 昼夜）
+- 材料从 loot 和库存中移除（不再掉落废铁/布料等无用物品）
+- gm_guide 新增 NPC 作息指引（按时间段判断 NPC 状态）
+- gm_guide 稀有度掉落概率表（普通 2% / 精英 10% / Boss 35%）
+
+### Fixed
+
+- SQL 注入修复：exploration.ts 和 encounter.ts 全部改用参数化查询
+- NaN 防御：checkTravelArrival 损坏状态不产生 NaN
+- 日期系统：无效起始日期回退到默认值
+- take_loot 数量校验拦截 NaN/浮点数/Infinity
+- check_arrival 到达分支不可达的问题
+- 事务保护：completeQuest 全程 BEGIN/COMMIT/ROLLBACK
+- 路径安全：所有工具添加 db_path 目录遍历防护
+
+### Changed
+
+- 数据库 Schema：28 张表
+- 测试覆盖：288 个测试用例
+- 工具数量：32 个
 
 ## [0.3.0] - 2025-01-18
 
