@@ -16,6 +16,7 @@ import { registerEquipTools } from "./tools/equip";
 import { registerEventLogTools } from "./tools/event-log";
 import { registerExplorationTools } from "./tools/exploration";
 import { registerGMGuideTool } from "./tools/gm-guide";
+import { registerEncounterTool } from "./tools/encounter";
 
 export default function (pi: ExtensionAPI) {
   registerDiceTool(pi);
@@ -35,6 +36,7 @@ export default function (pi: ExtensionAPI) {
   registerEventLogTools(pi);
   registerExplorationTools(pi);
   registerGMGuideTool(pi);
+  registerEncounterTool(pi);
 
   pi.on("session_start", async (_event, ctx) => {
     ctx.ui.notify("⚙️ Chronika Engine loaded", "info");
