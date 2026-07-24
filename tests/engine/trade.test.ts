@@ -7,7 +7,7 @@ interface TradeInput {
   items: { item_name: string; quantity: number; price_per_unit: number }[];
   mode: "buy" | "sell";
   price_modifier?: number;
-  charisma?: number;
+  barter?: number;
 }
 
 describe("trade", () => {
@@ -128,13 +128,13 @@ describe("trade", () => {
     assert.strictEqual(result.credits_after, 76);
   });
 
-  it("should reduce buy price when charisma is high", () => {
+  it("should reduce buy price when barter is high", () => {
     // Arrange
     const input: TradeInput = {
       credits: 100,
       items: [{ item_name: "剑", quantity: 1, price_per_unit: 30 }],
       mode: "buy",
-      charisma: 10,
+      barter: 10,
     };
 
     // Act
@@ -147,13 +147,13 @@ describe("trade", () => {
     assert.strictEqual(result.credits_after, 76);
   });
 
-  it("should increase sell price when charisma is high", () => {
+  it("should increase sell price when barter is high", () => {
     // Arrange
     const input: TradeInput = {
       credits: 50,
       items: [{ item_name: "废铁", quantity: 1, price_per_unit: 15 }],
       mode: "sell",
-      charisma: 10,
+      barter: 10,
     };
 
     // Act

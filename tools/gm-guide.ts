@@ -112,12 +112,14 @@ function getGMGuide(topic?: string): string {
 - 意志: 状态抗性（持续回合减半）
 
 ### 技能（升级+3/级）
-- 生存: loot 数量加成（+floor(survival / 3) max quantity）
-- 医疗: consume 治疗加成（+floor(medicine × 1.5) HP）
-- 机械: craft 产量加成（+floor(mechanics × 0.2)）
-- 魅力: trade 价格修正（buy -2%/点, sell +2%/点）
-- 口才: skill_check 检定用
-- 潜行: travel 遇敌降低（×(1.0 - stealth × 0.03)）
+- 生存: loot 数量（+floor(survival/3)）
+- 医疗: consume 治疗（+floor(medicine×1.5)）
+- 机械: craft 产量（+floor(mechanics×0.2)）
+- 议价: trade 价格（买-2%/点，卖+2%/点）
+- 口才: skill_check 交涉/欺骗检定
+- 潜行: travel 避敌（×(1-stealth×0.03)）
+- 开锁: skill_check 开锁/解除陷阱检定
+- 追踪: travel 发现额外信息和踪迹
 
 skill_check 的 modifier 参数应基于玩家属性计算。
 推荐规则（GM 可自行调整）：

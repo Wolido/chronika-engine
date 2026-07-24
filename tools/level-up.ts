@@ -6,7 +6,7 @@ export function registerLevelUpTool(pi: ExtensionAPI) {
   pi.registerTool({
     name: "level_up",
     label: "Level Up",
-    description: "Check if enough XP is accumulated to level up. Each level grants 1 attribute point (for strength/agility/endurance/perception/intelligence/willpower) and 3 skill points (for charisma/persuasion/survival/medicine/mechanics/stealth). The GM should query the player's current stats, let them allocate points, and save via db_exec.",
+    description: "Check if enough XP is accumulated to level up. Each level grants 1 attribute point (for strength/agility/endurance/perception/intelligence/willpower) and 3 skill points (for barter/persuasion/survival/medicine/mechanics/stealth). The GM should query the player's current stats, let them allocate points, and save via db_exec.",
     parameters: Type.Object({
       level: Type.Number({ description: "Current level" }),
       xp: Type.Number({ description: "Current XP" }),
