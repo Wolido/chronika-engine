@@ -75,6 +75,7 @@ export interface TravelEncounter {
   triggered: boolean;
   encounter_type?: string;
   description?: string;
+  danger_level?: number;
 }
 
 export interface TravelResult {
@@ -105,21 +106,46 @@ export function travel(db: any, input: TravelInput): TravelResult {
   const distance = row.values[0][0] as number;
 
   // Check for encounters
-  const encounterResult = db.exec(`SELECT encounter_type, description, probability FROM location_encounters WHERE location_name = '${input.current_location}' AND probability > 0`);
   let encounter: TravelEncounter = { triggered: false };
 
-  for (const encRow of encounterResult) {
-    for (const val of encRow.values) {
-      const encType = val[0] as string;
-      const encDesc = val[1] as string;
-      const prob = val[2] as number;
-      const roll = rollD100();
-      if (roll <= prob * 100) {
-        encounter = { triggered: true, encounter_type: encType, description: encDesc };
-        break;
+  // 1. Try table-based encounters
+  const encounterResult = db.exec(`SELECT encounter_type, description, probability FROM location_encounters WHERE location_name = '${input.current_location}' AND probability > 0`);
+
+  if (encounterResult.length > 0 && encounterResult[0].values.length > 0) {
+    // Use table data
+    for (const encRow of encounterResult) {
+      for (const val of encRow.values) {
+        const roll = rollD100();
+        if (roll <= (val[2] as number) * 100) {
+          // Read danger_level from current location
+          const dangerResult = db.exec(`SELECT danger_level FROM locations WHERE name = '${input.current_location}'`);
+          const danger = dangerResult.length > 0 ? (dangerResult[0].values[0]?.[0] as number) ?? 1 : 1;
+          encounter = { triggered: true, encounter_type: val[0] as string, description: val[1] as string, danger_level: danger };
+          break;
+        }
       }
+      if (encounter.triggered) break;
     }
-    if (encounter.triggered) break;
+  } else {
+    // 2. Auto-generate encounter based on danger levels
+    const fromDangerResult = db.exec(`SELECT danger_level FROM locations WHERE name = '${input.current_location}'`);
+    const toDangerResult = db.exec(`SELECT danger_level FROM locations WHERE name = '${input.target_location}'`);
+    const fromDanger = fromDangerResult.length > 0 ? (fromDangerResult[0].values[0]?.[0] as number) ?? 1 : 1;
+    const toDanger = toDangerResult.length > 0 ? (toDangerResult[0].values[0]?.[0] as number) ?? 1 : 1;
+    const avgDanger = (fromDanger + toDanger) / 2;
+    const encounterChance = avgDanger * 0.12 + 0.08;
+
+    if (Math.random() < encounterChance) {
+      const types = ["combat", "loot", "event", "npc"];
+      const typeIdx = Math.floor(Math.random() * types.length);
+      const avgDangerRounded = Math.round(avgDanger);
+      encounter = {
+        triggered: true,
+        encounter_type: types[typeIdx],
+        description: `Random ${types[typeIdx]} encounter (danger level ${avgDangerRounded})`,
+        danger_level: avgDangerRounded,
+      };
+    }
   }
 
   // Mark target as visited

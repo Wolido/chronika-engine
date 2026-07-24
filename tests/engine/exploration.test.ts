@@ -304,6 +304,159 @@ describe("travel", () => {
 
     db.close();
   });
+
+  it("should occasionally trigger auto-encounter in safe areas without encounter table data", async () => {
+    // Arrange
+    const db = await createDB();
+    db.run(
+      "INSERT INTO locations (name, description, danger_level, discovered, visited) VALUES (?, ?, ?, ?, ?), (?, ?, ?, ?, ?)",
+      ["安全起点", "低风险起点", 1, 1, 1, "安全终点", "低风险终点", 1, 1, 0]
+    );
+    db.run(
+      "INSERT INTO location_connections (from_location, to_location, distance_km) VALUES (?, ?, ?)",
+      ["安全起点", "安全终点", 4]
+    );
+    const input: TravelInput = {
+      current_location: "安全起点",
+      target_location: "安全终点",
+    };
+
+    // Force a deterministic roll that triggers the base 20% chance.
+    const originalRandom = Math.random;
+    Math.random = () => 0.15;
+
+    try {
+      // Act
+      const result = travel(db, input);
+
+      // Assert
+      assert.strictEqual(result.success, true);
+      assert.strictEqual(result.encounter.triggered, true);
+      assert.strictEqual(typeof result.encounter.encounter_type, "string");
+      assert.ok(result.encounter.encounter_type!.length > 0);
+      assert.strictEqual(typeof result.encounter.description, "string");
+      assert.ok(result.encounter.description!.length > 0);
+      assert.strictEqual((result.encounter as any).danger_level, 1);
+    } finally {
+      Math.random = originalRandom;
+    }
+
+    db.close();
+  });
+
+  it("should frequently trigger auto-encounter in high-danger areas without encounter table data", async () => {
+    // Arrange
+    const db = await createDB();
+    db.run(
+      "INSERT INTO locations (name, description, danger_level, discovered, visited) VALUES (?, ?, ?, ?, ?), (?, ?, ?, ?, ?)",
+      ["高危起点", "高风险起点", 5, 1, 1, "高危终点", "高风险终点", 5, 1, 0]
+    );
+    db.run(
+      "INSERT INTO location_connections (from_location, to_location, distance_km) VALUES (?, ?, ?)",
+      ["高危起点", "高危终点", 4]
+    );
+    const input: TravelInput = {
+      current_location: "高危起点",
+      target_location: "高危终点",
+    };
+
+    // Force a deterministic roll that triggers the base 68% chance.
+    const originalRandom = Math.random;
+    Math.random = () => 0.5;
+
+    try {
+      // Act
+      const result = travel(db, input);
+
+      // Assert
+      assert.strictEqual(result.success, true);
+      assert.strictEqual(result.encounter.triggered, true);
+    } finally {
+      Math.random = originalRandom;
+    }
+
+    db.close();
+  });
+
+  it("should prioritize encounter table data when available", async () => {
+    // Arrange
+    const db = await createDB();
+    db.run(
+      "INSERT INTO locations (name, description, danger_level, discovered, visited) VALUES (?, ?, ?, ?, ?), (?, ?, ?, ?, ?)",
+      ["表数据起点", "有遭遇表数据", 2, 1, 1, "表数据终点", "目标", 2, 1, 0]
+    );
+    db.run(
+      "INSERT INTO location_connections (from_location, to_location, distance_km) VALUES (?, ?, ?)",
+      ["表数据起点", "表数据终点", 5]
+    );
+    db.run(
+      "INSERT INTO location_encounters (location_name, encounter_type, description, probability) VALUES (?, ?, ?, ?)",
+      ["表数据起点", "combat", "伏击的强盗", 1.0]
+    );
+    const input: TravelInput = {
+      current_location: "表数据起点",
+      target_location: "表数据终点",
+    };
+
+    const originalRandom = Math.random;
+    Math.random = () => 0.5;
+
+    try {
+      // Act
+      const result = travel(db, input);
+
+      // Assert
+      assert.strictEqual(result.success, true);
+      assert.strictEqual(result.encounter.triggered, true);
+      assert.strictEqual(result.encounter.encounter_type, "combat");
+      assert.strictEqual(result.encounter.description, "伏击的强盗");
+      assert.strictEqual(typeof (result.encounter as any).danger_level, "number");
+    } finally {
+      Math.random = originalRandom;
+    }
+
+    db.close();
+  });
+
+  it("should allow encounters to trigger multiple times on the same route", async () => {
+    // Arrange
+    const db = await createDB();
+    db.run(
+      "INSERT INTO locations (name, description, danger_level, discovered, visited) VALUES (?, ?, ?, ?, ?), (?, ?, ?, ?, ?)",
+      ["重复起点", "可重复遇敌起点", 1, 1, 1, "重复终点", "可重复遇敌终点", 1, 1, 0]
+    );
+    db.run(
+      "INSERT INTO location_connections (from_location, to_location, distance_km) VALUES (?, ?, ?)",
+      ["重复起点", "重复终点", 3]
+    );
+    const input: TravelInput = {
+      current_location: "重复起点",
+      target_location: "重复终点",
+    };
+
+    // Force deterministic rolls that always trigger the 20% chance.
+    const originalRandom = Math.random;
+    Math.random = () => 0.1;
+
+    try {
+      // Act
+      let triggerCount = 0;
+      for (let i = 0; i < 5; i++) {
+        const result = travel(db, input);
+        if (result.encounter.triggered) triggerCount++;
+      }
+
+      // Assert
+      assert.ok(
+        triggerCount > 1,
+        `Expected more than 1 encounter on the same route, got ${triggerCount}`
+      );
+    } finally {
+      Math.random = originalRandom;
+    }
+
+    db.close();
+  });
 });
 
 // ---------------------------------------------------------------------------

@@ -56,19 +56,6 @@ const ELEMENT_TYPES = [
   { type: "explosive", proc: 0.15 },
 ];
 
-const NAME_PREFIXES: Record<string, string[]> = {
-  common: ["破旧的", "生锈的", "磨损的"],
-  uncommon: ["坚固的", "改装的", "战术"],
-  rare: ["精制", "强化", "原型"],
-  legendary: ["末日", "天罚", "不朽", "虚空", "龙息"],
-};
-
-const NAME_SUFFIXES: Record<string, string[]> = {
-  melee: ["砍刀", "铁管", "匕首", "战斧", "棍棒"],
-  ranged: ["手枪", "步枪", "霰弹枪", "冲锋枪", "猎枪"],
-  thrown: ["飞刀", "手榴弹", "燃烧瓶"],
-};
-
 // Damage ranges by type and rarity
 const DAMAGE_BY_RARITY: Record<string, { min: number; max: number }> = {
   common: { min: 2, max: 8 },
@@ -116,10 +103,8 @@ export function generateWeapon(input: GenerateWeaponInput): GenerateWeaponResult
   const weight = weaponType === "melee" ? rollBetween(2, 6) : rollBetween(1, 4);
   const value = (RARITIES.indexOf(rarity) + 1) * dmgMax * 2;
 
-  // Generate name
-  const prefix = pick(NAME_PREFIXES[rarity] || NAME_PREFIXES.common);
-  const suffix = pick(NAME_SUFFIXES[weaponType] || NAME_SUFFIXES.melee);
-  const name = input.name_hint || `${prefix}${suffix}`;
+  // Generate name (LLM fills this)
+  const name = input.name_hint || "";
 
   // Ranged extras
   let rangeMin: number | undefined;
@@ -152,11 +137,11 @@ export function generateWeapon(input: GenerateWeaponInput): GenerateWeaponResult
     const seed = generateSeed();
     const mag = rollBetween(Math.ceil(seed.magnitude_min), Math.floor(seed.magnitude_max));
     legendaryEffect = {
-      effect_name: pick(["穷途末路", "弹射弹头", "天降正义", "吸血鬼之吻", "元素风暴", "杀戮狂欢", "无限弹药", "狂暴模式"]),
+      effect_name: "",   // LLM fills
       trigger: seed.trigger,
       effect_type: seed.effect_type,
       magnitude: mag,
-      description: seed.description_template.replace("{magnitude}", String(mag)),
+      description: "",   // LLM fills
     };
     legendaryRoll = Math.floor(Math.random() * 100);
   }
@@ -166,7 +151,7 @@ export function generateWeapon(input: GenerateWeaponInput): GenerateWeaponResult
     damage_min: dmgMin, damage_max: dmgMax,
     accuracy: Math.round(clippedAccuracy * 100) / 100,
     tier, rarity, weight, value,
-    description: `A ${rarity} ${weaponType} weapon that deals ${dmgMin}-${dmgMax} ${damageType} damage.`,
+    description: `A ${rarity} ${weaponType} weapon. Damage: ${dmgMin}-${dmgMax} ${damageType}. Accuracy: ${clippedAccuracy.toFixed(2)}. Tier ${tier}.`,
     range_min: rangeMin, range_max: rangeMax, ammo_type: ammoType,
     element, legendary_effect: legendaryEffect,
   };

@@ -70,14 +70,34 @@ describe("generateWeapon", () => {
     // Assert
     assert.strictEqual(result.success, true);
     assert.strictEqual(weapon.rarity, "legendary");
+    assert.strictEqual(
+      weapon.name,
+      "",
+      "weapon name should be empty (filled by LLM)"
+    );
     assert.ok(
       weapon.legendary_effect,
       "legendary weapon must have legendary_effect"
     );
+    assert.strictEqual(
+      weapon.legendary_effect!.effect_name,
+      "",
+      "legendary_effect.effect_name should be empty (filled by LLM)"
+    );
     assert.ok(
-      typeof weapon.legendary_effect!.effect_name === "string" &&
-        weapon.legendary_effect!.effect_name.length > 0,
-      `legendary_effect.effect_name should be non-empty, got: ${weapon.legendary_effect!.effect_name}`
+      typeof weapon.legendary_effect!.trigger === "string" &&
+        weapon.legendary_effect!.trigger.length > 0,
+      `legendary_effect.trigger should be non-empty, got: ${weapon.legendary_effect!.trigger}`
+    );
+    assert.ok(
+      typeof weapon.legendary_effect!.effect_type === "string" &&
+        weapon.legendary_effect!.effect_type.length > 0,
+      `legendary_effect.effect_type should be non-empty, got: ${weapon.legendary_effect!.effect_type}`
+    );
+    assert.ok(
+      typeof weapon.legendary_effect!.magnitude === "number" &&
+        weapon.legendary_effect!.magnitude > 0,
+      `legendary_effect.magnitude should be positive, got: ${weapon.legendary_effect!.magnitude}`
     );
   });
 
