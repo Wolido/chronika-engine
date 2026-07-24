@@ -48,27 +48,31 @@ combat_resolve attacker: {stats: {strength: 8, agility: 5, endurance: 6, percept
 | `init_db` | 创建游戏数据库 |
 | `world_gen` | 世界数据校验+写入 |
 | `skill_check` | 属性/技能检定（1d20） |
-| `combat_resolve` | 一键战斗裁定（含元素触发 + 传奇特效） |
-| `loot` | 掉落表掷骰 |
-| `consume` | 消耗品使用 |
-| `craft` | 配方制作 |
-| `trade` | 买卖交易 |
+| `combat_resolve` | 一键战斗裁定（含元素 + 传奇） |
+| `loot` | 掉落表掷骰（生存/开锁加成） |
+| `consume` | 消耗品使用（医疗加成） |
+| `craft` | 配方制作（机械加成） |
+| `trade` | 买卖交易（议价加成） |
 | `equip_item` | 穿装备 |
 | `unequip_item` | 脱装备 |
 | `equipment_stats` | 查看装备总属性 |
 | `status_apply` | 附着状态效果 |
 | `status_tick` | 每回合状态结算 |
-| `level_up` | 升级系统 |
+| `level_up` | 升级（属性+1/级，技能+3/级） |
 | `legendary_gen` | 传奇特效生成 |
-| `log_event` | 记录游戏事件到历史 |
-| `get_history` | 查询游戏历史记录 |
+| `generate_weapon` | 随机生成武器 |
+| `log_event` | 记录游戏事件 |
+| `get_history` | 查询游戏历史 |
 | `discover_location` | 发现新地点 |
-| `travel` | 在地点间移动 |
+| `travel` | 地图间移动（自动遇敌 + 追踪发现） |
 | `explore` | 搜索当前地点 |
 | `get_map` | 查看地图 |
-| `discover_poi` | 发现地点内的 POI |
-| `move_to` | 在 POI 间移动 |
-| `generate_weapon` | 随机生成武器（含传奇特效） |
+| `discover_poi` | 发现地点内 POI |
+| `move_to` | POI 间移动 |
+| `get_encounter` | 按危险等级选取怪物 |
+| `gm_guide` | GM 行为指南 |
+
+> 工具数量：29 个 · 测试覆盖：249 个测试用例
 
 ## 推荐启动命令
 
@@ -81,11 +85,12 @@ dice,db_query,db_exec,init_db,world_gen,\
 skill_check,combat_resolve,loot,\
 consume,craft,trade,\
 status_apply,status_tick,\
-level_up,legendary_gen,\
+level_up,legendary_gen,generate_weapon,\
 equip_item,unequip_item,equipment_stats,\
 log_event,get_history,\
 discover_location,travel,explore,get_map,\
-discover_poi,move_to \
+discover_poi,move_to,\
+get_encounter,gm_guide \
   --no-skills \
   --model deepseek-v4-flash"
 ```

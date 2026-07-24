@@ -6,6 +6,37 @@
 
 - （暂无）
 
+## [0.3.0] - 2025-01-18
+
+### Added
+
+- 武器生成器：generate_weapon（按稀有度/类型随机生成，传奇含 LLM 命名）
+- 属性系统实装：感知影响命中、敏捷影响闪避、耐力影响 HP
+- 技能系统实装（8 技能全引擎效果）：
+  - 生存 → loot 数量加成
+  - 医疗 → consume 治疗加成
+  - 机械 → craft 产量加成
+  - 议价 → trade 价格修正
+  - 潜行 → travel 避敌
+  - 开锁 → loot 概率加成
+  - 追踪 → travel 发现信息
+  - 口才 → skill_check 检定
+- 属性/技能分离，升级分别加点（属性 +1/级，技能 +3/级）
+- 遭遇选取工具：get_encounter（按危险等级从 monsters 表选怪）
+- GM 行为指南工具：gm_guide
+- travel 自动遇敌（按危险等级概率触发，不限次数）
+
+### Changed
+
+- 魅力 → 议价（重命名）
+- 口才从 trade 剥离，专注 skill_check
+- 工具描述全部嵌入废土上下文
+- README 更新完整工具列表和 pg 命令
+
+### Fixed
+
+- sql.js WASM 路径改用 createRequire 解析
+
 ## [0.2.1] - 2025-01-18
 
 ### Added
@@ -18,8 +49,8 @@
 
 ### Fixed
 
-- sql.js WASM 路径改用 createRequire 解析，修复 npm 安装后找不到 sql-wasm.wasm 的问题
-- 工具描述嵌入废土上下文，新 session 的 LLM 自动获知世界观
+- sql.js WASM 路径修复
+- 工具描述嵌入废土上下文
 
 ### Changed
 
