@@ -8,6 +8,30 @@ function rollD100(): number {
 }
 
 // ---------------------------------------------------------------------------
+// SQL helpers — sql.js 的 exec() 不支持参数绑定，用 prepare + bind 代替
+// ---------------------------------------------------------------------------
+
+/**
+ * 执行参数化查询，返回与 db.exec() 兼容的结果数组。
+ * 每条结果包含 columns 和 values（二维数组）。
+ */
+function queryExec(db: any, sql: string, params: any[] = []): { columns: string[]; values: any[][] }[] {
+  const stmt = db.prepare(sql);
+  if (params.length > 0) stmt.bind(params);
+  const rows: any[][] = [];
+  let columns: string[] = [];
+  while (stmt.step()) {
+    const obj = stmt.getAsObject();
+    if (columns.length === 0) {
+      columns = Object.keys(obj);
+    }
+    rows.push(columns.map(c => obj[c]));
+  }
+  stmt.free();
+  return rows.length > 0 ? [{ columns, values: rows }] : [];
+}
+
+// ---------------------------------------------------------------------------
 // discoverLocation
 // ---------------------------------------------------------------------------
 
@@ -32,13 +56,13 @@ export interface DiscoverResult {
 
 export function discoverLocation(db: any, input: DiscoverInput): DiscoverResult {
   // Check if location already exists
-  const existing = db.exec(`SELECT name FROM locations WHERE name = '${input.name}'`);
+  const existing = queryExec(db, "SELECT name FROM locations WHERE name = ?", [input.name]);
   if (existing.length > 0 && existing[0].values.length > 0) {
     return { success: false, location_name: input.name, connection: { from: "", to: "" }, total_locations: 0, error: `Location "${input.name}" already exists` };
   }
 
   // Check if connected_to exists
-  const source = db.exec(`SELECT name FROM locations WHERE name = '${input.connected_to}'`);
+  const source = queryExec(db, "SELECT name FROM locations WHERE name = ?", [input.connected_to]);
   if (source.length === 0 || source[0].values.length === 0) {
     return { success: false, location_name: input.name, connection: { from: "", to: "" }, total_locations: 0, error: `Source location "${input.connected_to}" not found` };
   }
@@ -93,14 +117,15 @@ export interface TravelResult {
 
 export function travel(db: any, input: TravelInput): TravelResult {
   // Check if target exists
-  const targetResult = db.exec(`SELECT name FROM locations WHERE name = '${input.target_location}'`);
+  const targetResult = queryExec(db, "SELECT name FROM locations WHERE name = ?", [input.target_location]);
   if (targetResult.length === 0 || targetResult[0].values.length === 0) {
     return { success: false, from: input.current_location, to: input.target_location, distance_km: 0, encounter: { triggered: false }, error: `Target "${input.target_location}" not found` };
   }
 
   // Check connection (bidirectional)
-  const connResult = db.exec(
-    `SELECT distance_km, description FROM location_connections WHERE (from_location = '${input.current_location}' AND to_location = '${input.target_location}') OR (from_location = '${input.target_location}' AND to_location = '${input.current_location}')`
+  const connResult = queryExec(db,
+    "SELECT distance_km, description FROM location_connections WHERE (from_location = ? AND to_location = ?) OR (from_location = ? AND to_location = ?)",
+    [input.current_location, input.target_location, input.target_location, input.current_location]
   );
   if (connResult.length === 0 || connResult[0].values.length === 0) {
     return { success: false, from: input.current_location, to: input.target_location, distance_km: 0, encounter: { triggered: false }, error: `No connection between "${input.current_location}" and "${input.target_location}"` };
@@ -113,7 +138,10 @@ export function travel(db: any, input: TravelInput): TravelResult {
   let encounter: TravelEncounter = { triggered: false };
 
   // 1. Try table-based encounters
-  const encounterResult = db.exec(`SELECT encounter_type, description, probability FROM location_encounters WHERE location_name = '${input.current_location}' AND probability > 0`);
+  const encounterResult = queryExec(db,
+    "SELECT encounter_type, description, probability FROM location_encounters WHERE location_name = ? AND probability > 0",
+    [input.current_location]
+  );
 
   if (encounterResult.length > 0 && encounterResult[0].values.length > 0) {
     // Use table data
@@ -122,7 +150,7 @@ export function travel(db: any, input: TravelInput): TravelResult {
         const roll = rollD100();
         if (roll <= (val[2] as number) * 100) {
           // Read danger_level from current location
-          const dangerResult = db.exec(`SELECT danger_level FROM locations WHERE name = '${input.current_location}'`);
+          const dangerResult = queryExec(db, "SELECT danger_level FROM locations WHERE name = ?", [input.current_location]);
           const danger = dangerResult.length > 0 ? (dangerResult[0].values[0]?.[0] as number) ?? 1 : 1;
           encounter = { triggered: true, encounter_type: val[0] as string, description: val[1] as string, danger_level: danger };
           break;
@@ -132,8 +160,8 @@ export function travel(db: any, input: TravelInput): TravelResult {
     }
   } else {
     // 2. Auto-generate encounter based on danger levels
-    const fromDangerResult = db.exec(`SELECT danger_level FROM locations WHERE name = '${input.current_location}'`);
-    const toDangerResult = db.exec(`SELECT danger_level FROM locations WHERE name = '${input.target_location}'`);
+    const fromDangerResult = queryExec(db, "SELECT danger_level FROM locations WHERE name = ?", [input.current_location]);
+    const toDangerResult = queryExec(db, "SELECT danger_level FROM locations WHERE name = ?", [input.target_location]);
     const fromDanger = fromDangerResult.length > 0 ? (fromDangerResult[0].values[0]?.[0] as number) ?? 1 : 1;
     const toDanger = toDangerResult.length > 0 ? (toDangerResult[0].values[0]?.[0] as number) ?? 1 : 1;
     const avgDanger = (fromDanger + toDanger) / 2;
@@ -156,7 +184,7 @@ export function travel(db: any, input: TravelInput): TravelResult {
   }
 
   // Mark target as visited
-  db.run(`UPDATE locations SET visited = 1, discovered = 1 WHERE name = '${input.target_location}'`);
+  db.run("UPDATE locations SET visited = 1, discovered = 1 WHERE name = ?", [input.target_location]);
 
   // Tracking discovery
   let trackingDiscovery = false;
@@ -195,7 +223,7 @@ export interface ExploreResult {
 }
 
 export function explore(db: any, input: ExploreInput): ExploreResult {
-  const locResult = db.exec(`SELECT description, danger_level, has_shelter FROM locations WHERE name = '${input.location_name}'`);
+  const locResult = queryExec(db, "SELECT description, danger_level, has_shelter FROM locations WHERE name = ?", [input.location_name]);
   if (locResult.length === 0 || locResult[0].values.length === 0) {
     return { location_name: input.location_name, description: "", danger_level: 0, has_shelter: false, pois: [], available_connections: [], cross_location_exits: [], discoveries: [], error: `Location "${input.location_name}" not found` };
   }
@@ -206,12 +234,12 @@ export function explore(db: any, input: ExploreInput): ExploreResult {
   const hasShelter = row.values[0][2] as number;
 
   // Check encounters
-  const encResult = db.exec(`SELECT encounter_type, description, probability FROM location_encounters WHERE location_name = '${input.location_name}'`);
+  const encResult = queryExec(db, "SELECT encounter_type, description, probability FROM location_encounters WHERE location_name = ?", [input.location_name]);
   const discoveries: string[] = [];
   let encounter: TravelEncounter | undefined;
 
   // Query POIs
-  const poiResult = db.exec(`SELECT name, description, discovered FROM location_pois WHERE location_name = '${input.location_name}' ORDER BY name`);
+  const poiResult = queryExec(db, "SELECT name, description, discovered FROM location_pois WHERE location_name = ? ORDER BY name", [input.location_name]);
   const pois: { name: string; description: string; discovered: boolean }[] = [];
   for (const r of poiResult) {
     for (const v of r.values) {
@@ -220,7 +248,7 @@ export function explore(db: any, input: ExploreInput): ExploreResult {
   }
 
   // Query connections from this location
-  const connResult = db.exec(`SELECT pc.to_poi, pc.to_location, pc.description, pc.from_poi FROM poi_connections pc WHERE pc.location_name = '${input.location_name}'`);
+  const connResult = queryExec(db, "SELECT pc.to_poi, pc.to_location, pc.description, pc.from_poi FROM poi_connections pc WHERE pc.location_name = ?", [input.location_name]);
   const availableConnections: { to_poi: string; description?: string }[] = [];
   const crossLocationExits: { to_location: string; via: string }[] = [];
   for (const r of connResult) {
@@ -337,12 +365,12 @@ export interface MoveToResult {
 }
 
 export function discoverPOI(db: any, input: DiscoverPOIInput): DiscoverPOIResult {
-  const locResult = db.exec(`SELECT name FROM locations WHERE name = '${input.location_name}'`);
+  const locResult = queryExec(db, "SELECT name FROM locations WHERE name = ?", [input.location_name]);
   if (locResult.length === 0 || locResult[0].values.length === 0) {
     return { success: false, location: input.location_name, poi: input.name, total_pois: 0, connection_created: false, error: `Location "${input.location_name}" not found` };
   }
 
-  const existingResult = db.exec(`SELECT name FROM location_pois WHERE location_name = '${input.location_name}' AND name = '${input.name}'`);
+  const existingResult = queryExec(db, "SELECT name FROM location_pois WHERE location_name = ? AND name = ?", [input.location_name, input.name]);
   if (existingResult.length > 0 && existingResult[0].values.length > 0) {
     return { success: false, location: input.location_name, poi: input.name, total_pois: 0, connection_created: false, error: `POI "${input.name}" already exists in "${input.location_name}"` };
   }
@@ -355,7 +383,7 @@ export function discoverPOI(db: any, input: DiscoverPOIInput): DiscoverPOIResult
     connectionCreated = true;
   }
 
-  const countResult = db.exec(`SELECT COUNT(*) as c FROM location_pois WHERE location_name = '${input.location_name}' AND discovered = 1`);
+  const countResult = queryExec(db, "SELECT COUNT(*) as c FROM location_pois WHERE location_name = ? AND discovered = 1", [input.location_name]);
   const total = countResult[0]?.values[0]?.[0] ?? 1;
 
   return { success: true, location: input.location_name, poi: input.name, total_pois: total as number, connection_created: connectionCreated };
@@ -363,31 +391,32 @@ export function discoverPOI(db: any, input: DiscoverPOIInput): DiscoverPOIResult
 
 export function moveTo(db: any, input: MoveToInput): MoveToResult {
   // Check if target POI exists in this location
-  const poiResult = db.exec(`SELECT name FROM location_pois WHERE location_name = '${input.location_name}' AND name = '${input.target_poi}'`);
+  const poiResult = queryExec(db, "SELECT name FROM location_pois WHERE location_name = ? AND name = ?", [input.location_name, input.target_poi]);
   if (poiResult.length === 0 || poiResult[0].values.length === 0) {
-    const anyPoiResult = db.exec(`SELECT name FROM location_pois WHERE location_name = '${input.location_name}'`);
+    const anyPoiResult = queryExec(db, "SELECT name FROM location_pois WHERE location_name = ?", [input.location_name]);
     const available = anyPoiResult.length > 0 ? anyPoiResult[0].values.map(v => v[0] as string) : [];
     return { success: false, location: input.location_name, poi: input.target_poi, pois_available: available, error: `POI "${input.target_poi}" not found in "${input.location_name}"` };
   }
 
   // If no poi_connections are defined for this location, movement is unrestricted
-  const connCountResult = db.exec(`SELECT COUNT(*) as c FROM poi_connections WHERE location_name = '${input.location_name}'`);
+  const connCountResult = queryExec(db, "SELECT COUNT(*) as c FROM poi_connections WHERE location_name = ?", [input.location_name]);
   const connCount = (connCountResult[0]?.values[0]?.[0] ?? 0) as number;
 
   if (connCount === 0) {
-    const allPoisResult = db.exec(`SELECT name FROM location_pois WHERE location_name = '${input.location_name}' AND discovered = 1`);
+    const allPoisResult = queryExec(db, "SELECT name FROM location_pois WHERE location_name = ? AND discovered = 1", [input.location_name]);
     const allPois = allPoisResult.length > 0 ? allPoisResult[0].values.map(v => v[0] as string) : [];
     return { success: true, location: input.location_name, poi: input.target_poi, pois_available: allPois };
   }
 
   // Check for a direct connection leading to the target POI
-  const connResult = db.exec(
-    `SELECT pc.to_location FROM poi_connections pc WHERE pc.location_name = '${input.location_name}' AND pc.to_poi = '${input.target_poi}'`
+  const connResult = queryExec(db,
+    "SELECT pc.to_location FROM poi_connections pc WHERE pc.location_name = ? AND pc.to_poi = ?",
+    [input.location_name, input.target_poi]
   );
 
   if (connResult.length === 0 || connResult[0].values.length === 0) {
     // No direct connection found - show what IS available
-    const availResult = db.exec(`SELECT DISTINCT pc.to_poi FROM poi_connections pc WHERE pc.location_name = '${input.location_name}' AND pc.to_poi IS NOT NULL`);
+    const availResult = queryExec(db, "SELECT DISTINCT pc.to_poi FROM poi_connections pc WHERE pc.location_name = ? AND pc.to_poi IS NOT NULL", [input.location_name]);
     const available: string[] = [];
     for (const r of availResult) {
       for (const v of r.values) {
@@ -401,7 +430,10 @@ export function moveTo(db: any, input: MoveToInput): MoveToResult {
   const toLocation = connResult[0].values[0][0] as string | null;
 
   // Get all destinations reachable from the new current POI
-  const allAvailResult = db.exec(`SELECT pc.to_poi FROM poi_connections pc WHERE pc.location_name = '${input.location_name}' AND pc.from_poi = '${input.target_poi}' AND pc.to_poi IS NOT NULL`);
+  const allAvailResult = queryExec(db,
+    "SELECT pc.to_poi FROM poi_connections pc WHERE pc.location_name = ? AND pc.from_poi = ? AND pc.to_poi IS NOT NULL",
+    [input.location_name, input.target_poi]
+  );
   const allAvailable: string[] = [];
   for (const r of allAvailResult) {
     for (const v of r.values) {

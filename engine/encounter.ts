@@ -1,3 +1,25 @@
+// ---------------------------------------------------------------------------
+// SQL helper — sql.js 的 exec() 不支持参数绑定，用 prepare + bind 代替
+// ---------------------------------------------------------------------------
+
+function queryExec(db: any, sql: string, params: any[] = []): { columns: string[]; values: any[][] }[] {
+  const stmt = db.prepare(sql);
+  if (params.length > 0) stmt.bind(params);
+  const rows: any[][] = [];
+  let columns: string[] = [];
+  while (stmt.step()) {
+    const obj = stmt.getAsObject();
+    if (columns.length === 0) {
+      columns = Object.keys(obj);
+    }
+    rows.push(columns.map(c => obj[c]));
+  }
+  stmt.free();
+  return rows.length > 0 ? [{ columns, values: rows }] : [];
+}
+
+// ---------------------------------------------------------------------------
+
 export interface EncounterRequest {
   danger_level: number;
   db: any;
@@ -28,7 +50,10 @@ export function getEncounter(input: EncounterRequest): EncounterResult {
   const { danger_level, db } = input;
 
   // 1. Try exact tier match
-  const exactResult = db.exec(`SELECT name, category, hp, damage_min, damage_max, accuracy, evasion, armor, tier, xp_reward FROM monsters WHERE tier = ${danger_level}`);
+  const exactResult = queryExec(db,
+    "SELECT name, category, hp, damage_min, damage_max, accuracy, evasion, armor, tier, xp_reward FROM monsters WHERE tier = ?",
+    [danger_level]
+  );
 
   if (exactResult.length > 0 && exactResult[0].values.length > 0) {
     const row = exactResult[0].values[Math.floor(Math.random() * exactResult[0].values.length)];
@@ -46,7 +71,10 @@ export function getEncounter(input: EncounterRequest): EncounterResult {
   }
 
   // 2. Find closest tier
-  const allResult = db.exec("SELECT name, category, hp, damage_min, damage_max, accuracy, evasion, armor, tier, xp_reward FROM monsters ORDER BY ABS(tier - " + danger_level + ") LIMIT 1");
+  const allResult = queryExec(db,
+    "SELECT name, category, hp, damage_min, damage_max, accuracy, evasion, armor, tier, xp_reward FROM monsters ORDER BY ABS(tier - ?) LIMIT 1",
+    [danger_level]
+  );
 
   if (allResult.length > 0 && allResult[0].values.length > 0) {
     const row = allResult[0].values[0];

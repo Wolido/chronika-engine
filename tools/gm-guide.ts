@@ -7,7 +7,7 @@ export function registerGMGuideTool(pi: ExtensionAPI) {
     label: "GM Guide",
     description: "Display the Chronika Engine GM behavior guide. Explains how to run the game, set up encounters, use tools, and maintain the wasteland survival experience. Call this when you need guidance on how to proceed as a game master.",
     parameters: Type.Object({
-      topic: Type.Optional(Type.String({ description: "Optional: specific topic like 'encounters', 'combat', 'loot', 'exploration', 'balance'" })),
+      topic: Type.Optional(Type.String({ description: "Optional: specific topic like 'encounters', 'combat', 'loot', 'exploration', 'balance', 'attributes', 'schedule'" })),
     }),
     async execute(_toolCallId, params) {
       const guide = getGMGuide(params.topic);
@@ -20,6 +20,7 @@ export function registerGMGuideTool(pi: ExtensionAPI) {
 }
 
 function getGMGuide(topic?: string): string {
+  if (topic) topic = topic.trim().toLowerCase();
   const full = `# Chronika Engine — GM 行为指南
 
 ## 核心原则
@@ -138,6 +139,19 @@ skill_check 的 modifier 参数应基于玩家属性计算。
 | 抗压/说服 | willpower | willpower - 5 |
 
 例如：玩家尝试潜入（agility=8），modifier = 8-5 = +3`,
+    schedule: `## NPC 作息（参考）
+
+- 每天上午 8:00 前，大部分 NPC 未起床
+- 上午 8:00-12:00 商人营业、NPC 活跃
+- 中午 12:00-13:00 午休，部分 NPC 不在岗
+- 下午 13:00-17:00 正常营业
+- 傍晚 17:00-19:00 陆续收摊
+- 夜间 19:00-5:00 大部分 NPC 休息，酒馆和黑市例外
+- 铁匠/武器商通常 9:00-18:00 营业
+- 酒馆直到凌晨 2:00 都有人
+- 普通民居晚上敲门可能没人应，也可能惹怒住户
+- 星期天部分 NPC 休息
+- 调 game_time 查看当前时间，据此判断 NPC 的状态`,
     loot: `## 掉落
 
 - 用 \`loot\` 工具按概率表生成掉落物。
@@ -149,7 +163,7 @@ skill_check 的 modifier 参数应基于玩家属性计算。
   - tier 3: 主 uncommon/rare，legendary 可能
   - tier 4-5: 主 rare/legendary
 - 快速按敌人 tier 生成掉落：调 \`generate_loot(tier: N)\`
-- 自定义掉落表：调 \`loot(table: [...])\`,`
+- 自定义掉落表：调 \`loot(table: [...])\``
     exploration: `## 探索
 
 - 玩家说"看看周围" → 调 \`explore\`
