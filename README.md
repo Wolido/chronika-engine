@@ -82,7 +82,10 @@ skill_check,combat_resolve,loot,\
 consume,craft,trade,\
 status_apply,status_tick,\
 level_up,legendary_gen,\
-equip_item,unequip_item,equipment_stats \
+equip_item,unequip_item,equipment_stats,\
+log_event,get_history,\
+discover_location,travel,explore,get_map,\
+discover_poi,move_to \
   --no-skills \
   --model deepseek-v4-flash"
 ```
