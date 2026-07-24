@@ -1,6 +1,6 @@
 # Chronika Engine
 
-一个数据驱动的文字 RPG 引擎，基于 [Pi](https://pi.dev) 扩展系统构建。
+数据驱动的文字 RPG 引擎，基于 [Pi](https://pi.dev) 扩展系统构建。
 
 一个数据库 = 一个游戏世界。世界观、武器、怪物、物品、配方全部存储在 SQLite 中，引擎只负责计算和叙事。
 
@@ -14,31 +14,57 @@ pi install npm:chronika-engine
 
 ## 快速开始
 
-启动 pi：
+启动后，说一句：
+
+```
+开玩
+```
+
+系统会自动创建世界、生成初始地点和角色，开始废土生存冒险。之后你想做什么直接说，GM 会调用引擎工具推进游戏。
+
+## 推荐启动命令
+
+为 Pi 框架配置一个独立的启动状态，专用于运行 Chronika 游戏环境。不加载任何 skills 或额外的系统提示词。
+
+**Fish shell：**
+
+```fish
+abbr --add pg "pi \
+  --tools read,ls,grep,find,bash,subagent,\
+dice,db_query,db_exec,init_db,world_gen,\
+skill_check,combat_resolve,loot,\
+consume,craft,trade,\
+status_apply,status_tick,\
+level_up,legendary_gen,generate_weapon,\
+equip_item,unequip_item,equipment_stats,\
+log_event,get_history,\
+discover_location,travel,explore,get_map,\
+discover_poi,move_to,\
+get_encounter,gm_guide \
+  --no-skills --no-context-files \
+  --model deepseek-v4-flash"
+```
+
+**Bash / Zsh：**
 
 ```bash
-pi
+alias pg='pi \
+  --tools read,ls,grep,find,bash,subagent,\
+dice,db_query,db_exec,init_db,world_gen,\
+skill_check,combat_resolve,loot,\
+consume,craft,trade,\
+status_apply,status_tick,\
+level_up,legendary_gen,generate_weapon,\
+equip_item,unequip_item,equipment_stats,\
+log_event,get_history,\
+discover_location,travel,explore,get_map,\
+discover_poi,move_to,\
+get_encounter,gm_guide \
+  --no-skills --no-context-files \
+  --model deepseek-v4-flash'
 ```
 
-然后初始化一个世界：
-
-```
-init_db db_path: "./my_world.db", world_name: "我的世界"
-```
-
-写入一些武器数据：
-
-```
-world_gen db_path: "./my_world.db", weapons: [{name: "铁管", category: "melee", damage_type: "bludgeoning", damage_min: 3, damage_max: 7, accuracy: 0.75, tier: 1, rarity: "common"}], monsters: [{name: "变异鼠", category: "beast", hp: 15, damage_min: 2, damage_max: 5, accuracy: 0.6, evasion: 0.3, armor: 0, tier: 1, xp_reward: 10, strength: 4, agility: 7, endurance: 3, perception: 6, intelligence: 2, willpower: 3}]
-```
-
-打一场：
-
-```
-combat_resolve attacker: {stats: {strength: 8, agility: 5, endurance: 6, perception: 4, intelligence: 3, willpower: 3}, weapon: {damage_min: 3, damage_max: 7, accuracy: 0.75, damage_type: "bludgeoning"}}, defender: {evasion: 0.3, armor: 0, hp: 15}
-```
-
-## 已注册的工具
+## 工具列表（29 个）
 
 | 工具 | 功能 |
 |------|------|
@@ -74,27 +100,6 @@ combat_resolve attacker: {stats: {strength: 8, agility: 5, endurance: 6, percept
 
 > 工具数量：29 个 · 测试覆盖：249 个测试用例
 
-## 推荐启动命令
-
-完整的 pg 命令（供 fish shell 用户参考）：
-
-```fish
-abbr --add pg "pi\
-  --tools read,ls,grep,find,\
-dice,db_query,db_exec,init_db,world_gen,\
-skill_check,combat_resolve,loot,\
-consume,craft,trade,\
-status_apply,status_tick,\
-level_up,legendary_gen,generate_weapon,\
-equip_item,unequip_item,equipment_stats,\
-log_event,get_history,\
-discover_location,travel,explore,get_map,\
-discover_poi,move_to,\
-get_encounter,gm_guide \
-  --no-skills \
-  --model deepseek-v4-flash"
-```
-
 ## 存档管理
 
 游戏数据库文件 (.db) 与引擎完全解耦，可以存放在任意位置：
@@ -107,23 +112,7 @@ get_encounter,gm_guide \
 
 ## 数据库结构
 
-引擎运行时使用 15 张表：
-
-- `world_meta` — 世界观元数据
-- `characters` — 角色
-- `weapons` — 武器模板
-- `items` — 物品模板
-- `monsters` — 怪物模板
-- `inventory` — 背包
-- `event_log` — 事件日志
-- `game_state` — 全局状态
-- `plugin_registry` — 插件注册
-- `status_effects` — 状态效果模板
-- `actions` — 行为定义
-- `brands` — 武器品牌
-- `weapon_parts` — 武器部件
-- `legendary_effects` — 传奇特效
-- `generated_weapons` — 生成武器实例
+引擎运行时使用 20 张表，涵盖世界观、角色、武器、怪物、物品、地图、装备、日志等。
 
 ## 开发
 
