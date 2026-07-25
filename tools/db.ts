@@ -3,6 +3,7 @@ import { Type } from "typebox";
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { DDL_STATEMENTS, SCHEMA_VERSION } from "../db/schema";
+import { SEED_MONSTERS, SEED_ITEMS, SEED_STATUS_EFFECTS, SEED_LOCATIONS, SEED_CONNECTIONS } from "../db/seed";
 import { getSQL, rowsToObjects } from "../db/connection";
 
 function resolvePath(inputPath: string): string {
@@ -131,7 +132,7 @@ export function registerDBTools(pi: ExtensionAPI) {
   pi.registerTool({
     name: "init_db",
     label: "Init DB",
-    description: "Create a new database for a wasteland survival RPG. Initializes 20 tables including locations, weapons, monsters, items, etc. Call this first when starting a new game. The world is a post-nuclear wasteland where survivors scavenge, fight mutants, and struggle to survive.",
+    description: "Create a new database for a wasteland survival RPG. Initializes 21 tables including locations, weapons, monsters, items, etc. Call this first when starting a new game. The world is a post-nuclear wasteland where survivors scavenge, fight mutants, and struggle to survive. On creation, automatically populates the database with 75 monsters, 13 items, 12 status effects, 15 locations with connections. Weapons, armor, and accessories are not seeded — generate them with generate_weapon during gameplay.",
     parameters: Type.Object({
       db_path: Type.String({ description: "Path where to create the database (e.g. './worlds/my_game.db')" }),
       world_name: Type.Optional(Type.String({ description: "Optional world name stored in world_meta" })),
@@ -153,6 +154,9 @@ export function registerDBTools(pi: ExtensionAPI) {
         const db = new SQL.Database();
         db.run("PRAGMA foreign_keys = ON");
         db.run(DDL_STATEMENTS);
+
+        // 插入种子数据
+        insertSeedData(db, params.world_name, params.world_name ? `初始区域` : undefined);
 
         if (params.world_name) {
           db.run("INSERT INTO world_meta (world_name) VALUES (?)", [params.world_name]);
@@ -184,4 +188,42 @@ export function registerDBTools(pi: ExtensionAPI) {
       }
     },
   });
+
+  // ── insertSeedData: 插入种子数据 ──
+  function insertSeedData(db: any, worldName?: string, region?: string): void {
+    // 怪物
+    const monsterCols = ["name", "category", "hp", "damage_min", "damage_max", "accuracy", "evasion", "armor", "tier", "xp_reward", "strength", "agility", "endurance", "perception", "intelligence", "willpower"];
+    for (const m of SEED_MONSTERS) {
+      const vals = monsterCols.map(c => (m as any)[c]);
+      db.run(`INSERT OR IGNORE INTO monsters (${monsterCols.join(", ")}) VALUES (${vals.map(() => "?").join(", ")})`, vals);
+    }
+
+    // 物品
+    const itemCols = ["name", "item_type", "rarity", "value", "weight", "effect_type", "effect_value", "stackable", "stack_max"];
+    for (const it of SEED_ITEMS) {
+      const vals = itemCols.map(c => (it as any)[c] ?? null);
+      db.run(`INSERT OR IGNORE INTO items (${itemCols.join(", ")}) VALUES (${vals.map(() => "?").join(", ")})`, vals);
+    }
+
+    // 状态效果
+    const effectCols = ["name", "effect_type", "target_attribute", "magnitude", "duration", "description"];
+    for (const e of SEED_STATUS_EFFECTS) {
+      const vals = effectCols.map(c => (e as any)[c]);
+      db.run(`INSERT OR IGNORE INTO status_effects (${effectCols.join(", ")}) VALUES (${vals.map(() => "?").join(", ")})`, vals);
+    }
+
+    // 地点
+    const locCols = ["name", "region", "description", "danger_level", "has_shelter"];
+    for (const l of SEED_LOCATIONS) {
+      const vals = locCols.map(c => (l as any)[c]);
+      db.run(`INSERT OR IGNORE INTO locations (name, region, description, danger_level, has_shelter, discovered, visited) VALUES (?, ?, ?, ?, ?, 1, 0)`, vals);
+    }
+
+    // 地点连接
+    const connCols = ["from_location", "to_location", "distance_km", "description"];
+    for (const c of SEED_CONNECTIONS) {
+      const vals = connCols.map(col => (c as any)[col]);
+      db.run(`INSERT OR IGNORE INTO location_connections (${connCols.join(", ")}) VALUES (${vals.map(() => "?").join(", ")})`, vals);
+    }
+  }
 }
