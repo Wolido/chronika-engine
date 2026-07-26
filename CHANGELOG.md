@@ -18,6 +18,7 @@
 - generate_weapon 返回 appropriateness_warnings，武器-特效不匹配时提示 GM 重 roll
 - legendary_gen 新增 weapon_context 参数，validate 模式支持 validateLegendaryForWeapon() 武器适配性检查
 - magnitude 按效果类型返回 6 组不同范围，替代旧版统一范围
+- create_character 工具：一键创建玩家角色（支持自定义属性/技能/初始HP/瓶盖/位置）
 
 ### Changed
 
@@ -27,6 +28,14 @@
 - 传奇武器生成后自动附带适配性警告
 - tools 层 schema 全部更新为 25×25 描述
 - 旧效果 refill_ammo/chain_lightning/summon/debuff_enemy 从"GM 叙事裁决"改为完整 engine 实现
+- SCHEMA_VERSION 8 → 9：characters 表补齐 barter/stealth/locksmith/tracking 四列
+- pg 别名简化：--no-extensions -e npm:chronika-engine，不再穷举工具名
+- world_gen 描述补全所有必需字段和约束（远程武器 range/ammo、消耗品 effect_type/value、状态效果 target_attribute）
+- 游戏时间改为与现实时间 1:1 对应（不再固定在 2250 年）
+
+### Fixed
+
+- init_db 种子数据插入失败：SEED_CONNECTIONS 字段名 from→from_location 修复，全部种子列映射加 ?? null 防护
 
 ### Tests
 
