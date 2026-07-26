@@ -4,6 +4,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { getSQL } from "../db/connection";
 import { discoverLocation, travel, explore, getKnownMap, discoverPOI, moveTo } from "../engine/exploration";
+import { dbAdapter } from "./time";
 
 function resolvePath(p: string): string {
   if (p.startsWith("/")) return p;
@@ -60,13 +61,16 @@ export function registerExplorationTools(pi: ExtensionAPI) {
       tracking: Type.Optional(Type.Number({ description: "Tracking skill — chance to discover clues or supplies" })),
     }),
     async execute(_toolCallId, params) {
-      const db = await openDB(params.db_path);
+      const sqlDb = await openDB(params.db_path);
+      // 挂上 game_state key-value store，让 quick travel 能持久化行程状态（供 check_arrival 查询）
+      const db = Object.assign(sqlDb, dbAdapter(sqlDb));
       const result = travel(db, { current_location: params.current_location, target_location: params.target_location, stealth: params.stealth, tracking: params.tracking });
-      saveDB(db, params.db_path);
+      saveDB(sqlDb, params.db_path);
       if (!result.success) return { content: [{ type: "text", text: `❌ ${result.error}` }], details: result, isError: true };
       const encLine = result.encounter.triggered ? `\n⚡ Encounter en route: ${result.encounter.description}` : "";
       const trackLine = result.tracking_discovery ? `\n🔍 Tracking discovery: ${result.tracking_detail}` : "";
-      return { content: [{ type: "text", text: `🚶 Traveled ${result.distance_km}km from ${result.from} to ${result.to}.${encLine}${trackLine}` }], details: result };
+      const timeLine = result.travel_time_minutes != null ? `\n⏱️ Estimated travel time: ${result.travel_time_minutes} minutes. Use check_arrival to see if you've arrived.` : "";
+      return { content: [{ type: "text", text: `🚶 Traveled ${result.distance_km}km from ${result.from} to ${result.to}.${encLine}${trackLine}${timeLine}` }], details: result };
     },
   });
 

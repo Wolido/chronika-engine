@@ -4,6 +4,7 @@
 // 直接操作 sql.js Database 实例。
 
 import type { AccessoryData } from "./legendary-gen.ts";
+import { startQuickTravel } from "./time.ts";
 
 function rollD100(): number {
   return Math.floor(Math.random() * 100) + 1;
@@ -98,6 +99,7 @@ export interface TravelInput {
   stealth?: number;
   tracking?: number;
   accessories?: AccessoryData[];
+  use_quick_travel?: boolean; // default true — 走现实时间，用 check_arrival 查询到达
 }
 
 export interface TravelEncounter {
@@ -118,6 +120,8 @@ export interface TravelResult {
   accessory_stealth_bonus?: number;
   accessory_danger_sense?: boolean;
   accessory_movement_speed?: number;
+  travel_time_minutes?: number;
+  arrives_at?: number;
   error?: string;
 }
 
@@ -221,7 +225,7 @@ export function travel(db: any, input: TravelInput): TravelResult {
     }
   }
 
-  return {
+  const result: TravelResult = {
     success: true,
     from: input.current_location,
     to: input.target_location,
@@ -233,6 +237,22 @@ export function travel(db: any, input: TravelInput): TravelResult {
     accessory_danger_sense: accBonus.dangerSense && encounter.triggered ? true : undefined,
     accessory_movement_speed: accBonus.movementSpeed > 0 ? accBonus.movementSpeed : undefined,
   };
+
+  // Quick travel：走现实时间（需要 db 提供 game_state key-value store 的 get/set）
+  if (input.use_quick_travel !== false && typeof db.set === "function") {
+    const qtResult = startQuickTravel({
+      db,
+      from: input.current_location,
+      to: input.target_location,
+      distance_km: distance,
+    });
+    if (qtResult.success) {
+      result.travel_time_minutes = qtResult.travel_time_minutes;
+      result.arrives_at = qtResult.arrives_at;
+    }
+  }
+
+  return result;
 }
 
 // ---------------------------------------------------------------------------

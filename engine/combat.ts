@@ -653,17 +653,17 @@ export function combatResolve(input: CombatInput): CombatResult {
   const critThreshold = Math.max(0, Math.round(critChance * 100));
 
   // 1. 命中判定
-  // 感知偏移（基准 5，每点 ±2%）
-  const perceptionMod = (input.attacker.stats.perception - 5) * 0.02;
-  // 敏捷偏移（基准 5，每点 ±2%）
-  const agilityMod = (input.attacker.stats.agility - 5) * 0.02;
-  // 防御者敏捷偏移
-  const defenderAgilityMod = input.defender.stats ? (input.defender.stats.agility - 5) * 0.02 : 0;
+  // 感知偏移（基准 5，每点 +2%；低于基准不惩罚）
+  const perceptionMod = Math.max(0, (input.attacker.stats.perception - 5) * 0.02);
+  // 敏捷偏移（基准 5，每点 +2%；低于基准不惩罚）
+  const agilityMod = Math.max(0, (input.attacker.stats.agility - 5) * 0.02);
+  // 防御者敏捷偏移（基准 5，每点 +2%；低于基准不惩罚）
+  const defenderAgilityMod = input.defender.stats ? Math.max(0, (input.defender.stats.agility - 5) * 0.02) : 0;
 
   const effectiveAccuracy = input.attacker.weapon.accuracy + perceptionMod + agilityMod;
   const effectiveEvasion = input.defender.evasion + defenderAgilityMod;
 
-  const hitThreshold = Math.max(0, Math.min(100, Math.round((effectiveAccuracy - effectiveEvasion) * 100)));
+  const hitThreshold = Math.max(0, Math.min(100, Math.round((0.5 + effectiveAccuracy - effectiveEvasion) * 100)));
   const hitRoll = rollD100();
   const hit = hitRoll <= hitThreshold;
 

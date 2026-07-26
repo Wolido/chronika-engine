@@ -11,7 +11,7 @@ import {
 } from "../engine/time";
 
 /** Wrap a sql.js Database with a simple get/set interface backed by game_state table. */
-function dbAdapter(sqlDb: any) {
+export function dbAdapter(sqlDb: any) {
   // Load existing key-value pairs from game_state
   const cache: Record<string, any> = {};
   try {

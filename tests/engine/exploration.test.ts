@@ -35,6 +35,11 @@ interface TravelInputWithTracking extends TravelInput {
   tracking?: number;
 }
 
+// Extended input type for RED phase: quick travel integration.
+interface TravelInputWithQuickTravel extends TravelInput {
+  use_quick_travel?: boolean;
+}
+
 // Extended input type for RED phase: POI connections.
 interface DiscoverPOIConnectionInput extends DiscoverPOIInput {
   connected_to?: string;
@@ -106,6 +111,20 @@ async function createDB(): Promise<Database> {
   db.run("PRAGMA foreign_keys = ON");
   db.run(EXPLORATION_DDL);
   return db;
+}
+
+/** Creates a DB that also supports the key-value store API required by quick travel. */
+async function createTravelDB(): Promise<Database & { get: (key: string) => any; set: (key: string, value: any) => void }> {
+  const sql = await getSQL();
+  const db = new sql.Database();
+  db.run("PRAGMA foreign_keys = ON");
+  db.run(EXPLORATION_DDL);
+  const store: Record<string, any> = {};
+  (db as any).get = (key: string) => store[key] ?? null;
+  (db as any).set = (key: string, value: any) => {
+    store[key] = value;
+  };
+  return db as any;
 }
 
 // ---------------------------------------------------------------------------
@@ -513,6 +532,48 @@ describe("travel", () => {
       detailNonEmpty,
       true,
       "tracking_detail should be non-empty when tracking_discovery is true",
+    );
+
+    db.close();
+  });
+
+  it("travel should return travel time when using quick_travel", async () => {
+    // Arrange
+    // Travel 3km at default 5km/h → 36 minutes
+    const db = await createTravelDB();
+    db.run(
+      "INSERT INTO locations (name, description, discovered, visited) VALUES (?, ?, ?, ?), (?, ?, ?, ?)",
+      ["时间起点", "测试起点", 1, 1, "时间终点", "测试终点", 1, 0]
+    );
+    db.run(
+      "INSERT INTO location_connections (from_location, to_location, distance_km) VALUES (?, ?, ?)",
+      ["时间起点", "时间终点", 3]
+    );
+    const input: TravelInputWithQuickTravel = {
+      current_location: "时间起点",
+      target_location: "时间终点",
+      use_quick_travel: true,
+    };
+    const beforeCall = Date.now();
+
+    // Act
+    const result = travel(db, input as TravelInput);
+    const afterCall = Date.now();
+
+    // Assert
+    assert.strictEqual(result.success, true);
+    assert.strictEqual(result.from, "时间起点");
+    assert.strictEqual(result.to, "时间终点");
+    assert.strictEqual(result.distance_km, 3);
+
+    const travelResult = result as any;
+    assert.strictEqual(travelResult.travel_time_minutes, 36);
+
+    const expectedTravelMs = 36 * 60 * 1000;
+    assert.ok(
+      travelResult.arrives_at >= beforeCall + expectedTravelMs - 100 &&
+        travelResult.arrives_at <= afterCall + expectedTravelMs + 100,
+      `Expected arrives_at within [${beforeCall + expectedTravelMs - 100}, ${afterCall + expectedTravelMs + 100}], got ${travelResult.arrives_at}`
     );
 
     db.close();

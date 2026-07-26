@@ -215,7 +215,7 @@ describe("combatResolve", () => {
 
   // --- 命中判定 -------------------------------------------------
 
-  it("should hit roughly 58% of the time when accuracy=0.78 and evasion=0.2", () => {
+  it("should always hit when effective accuracy far exceeds evasion", () => {
     const input = sampleCombat({
       attacker: {
         stats: { strength: 8, agility: 5, endurance: 6, perception: 4, intelligence: 3, willpower: 3 },
@@ -229,23 +229,24 @@ describe("combatResolve", () => {
 
     for (let i = 0; i < N; i++) {
       const result = combatResolve(input);
-      assert.strictEqual(result.hit_threshold, 58, `Expected hit_threshold=58, got ${result.hit_threshold}`);
+      assert.strictEqual(result.hit_threshold, 100, `Expected hit_threshold=100, got ${result.hit_threshold}`);
       hits += result.hit ? 1 : 0;
     }
 
-    assert.ok(
-      hits >= 100 && hits <= 132,
-      `Expected 100–132 hits out of ${N}, got ${hits}`
+    assert.strictEqual(
+      hits,
+      N,
+      `Expected ${N} hits out of ${N}, got ${hits}`
     );
   });
 
-  it("should never hit when accuracy=0.3 and evasion=0.6 (threshold negative)", () => {
+  it("should never hit when threshold is capped at 0", () => {
     const input = sampleCombat({
       attacker: {
         stats: { strength: 8, agility: 5, endurance: 6, perception: 4, intelligence: 3, willpower: 3 },
-        weapon: { damage_min: 5, damage_max: 10, accuracy: 0.3, damage_type: "slashing" },
+        weapon: { damage_min: 5, damage_max: 10, accuracy: 0.1, damage_type: "slashing" },
       },
-      defender: { evasion: 0.6, armor: 2, hp: 30 },
+      defender: { evasion: 0.7, armor: 2, hp: 30 },
     });
 
     for (let i = 0; i < 100; i++) {
@@ -256,6 +257,46 @@ describe("combatResolve", () => {
         `Expected miss but got hit on iteration ${i}`
       );
     }
+  });
+
+  it("should have ~70% hit chance for normal weapon vs normal monster", () => {
+    // accuracy=0.6, evasion=0.3 → (0.5 + 0.6 - 0.3) × 100 = 80
+    const input = sampleCombat({
+      attacker: { weapon: { damage_min: 5, damage_max: 5, accuracy: 0.6, damage_type: "slashing" } },
+      defender: { evasion: 0.3, armor: 0, hp: 100 },
+    });
+    const result = combatResolve(input);
+    assert.strictEqual(result.hit_threshold, 80); // was 30 with old formula
+  });
+
+  it("should still have >0% for low accuracy vs high evasion", () => {
+    // accuracy=0.4, evasion=0.6 → (0.5 + 0.4 - 0.6) × 100 = 30
+    const input = sampleCombat({
+      attacker: { weapon: { damage_min: 5, damage_max: 5, accuracy: 0.4, damage_type: "slashing" } },
+      defender: { evasion: 0.6, armor: 0, hp: 100 },
+    });
+    const result = combatResolve(input);
+    assert.strictEqual(result.hit_threshold, 30); // was 0 (capped) with old formula
+  });
+
+  it("should cap at 100 for very high accuracy", () => {
+    // accuracy=1.0, evasion=0 → (0.5 + 1.0 - 0) × 100 = 150 → capped 100
+    const input = sampleCombat({
+      attacker: { weapon: { damage_min: 5, damage_max: 5, accuracy: 1.0, damage_type: "slashing" } },
+      defender: { evasion: 0, armor: 0, hp: 100 },
+    });
+    const result = combatResolve(input);
+    assert.strictEqual(result.hit_threshold, 100);
+  });
+
+  it("should not go below 0", () => {
+    // accuracy=0.1, evasion=0.9 → (0.5 + 0.1 - 0.9) × 100 = -30 → capped 0
+    const input = sampleCombat({
+      attacker: { weapon: { damage_min: 5, damage_max: 5, accuracy: 0.1, damage_type: "slashing" } },
+      defender: { evasion: 0.9, armor: 0, hp: 100 },
+    });
+    const result = combatResolve(input);
+    assert.strictEqual(result.hit_threshold, 0);
   });
 
   // --- 暴击系统 -------------------------------------------------
@@ -422,7 +463,7 @@ describe("combatResolve", () => {
     });
 
     const result = combatResolve(input);
-    assert.strictEqual(result.hit_threshold, 40, `Expected hit_threshold=40, got ${result.hit_threshold}`);
+    assert.strictEqual(result.hit_threshold, 90, `Expected hit_threshold=90, got ${result.hit_threshold}`);
   });
 
   it("should increase attacker accuracy when perception is high, making hits easier", () => {
@@ -435,7 +476,7 @@ describe("combatResolve", () => {
     });
 
     const result = combatResolve(input);
-    assert.strictEqual(result.hit_threshold, 80, `Expected hit_threshold=80, got ${result.hit_threshold}`);
+    assert.strictEqual(result.hit_threshold, 100, `Expected hit_threshold=100, got ${result.hit_threshold}`);
   });
 
   // --- 传奇武器特效 (25×25) ------------------------------------
