@@ -1,6 +1,6 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
-import { generateSeed, validateLegendaryEffect } from "../engine/legendary-gen";
+import { generateSeed, validateLegendaryEffect, validateLegendaryForWeapon } from "../engine/legendary-gen";
 
 export function registerLegendaryGenTool(pi: ExtensionAPI) {
   pi.registerTool({
@@ -11,6 +11,12 @@ export function registerLegendaryGenTool(pi: ExtensionAPI) {
       mode: Type.String({ description: "'seed' to generate a random effect template, 'validate' to check a complete effect" }),
       effect: Type.Optional(Type.Any({ description: "Complete legendary effect to validate (for validate mode)" })),
       weapon_tier: Type.Optional(Type.Number({ description: "Weapon tier 1-5 (for validate mode)" })),
+      weapon_context: Type.Optional(Type.Object({
+        weapon_type: Type.String({ description: "Weapon type: melee/ranged/thrown" }),
+        tier: Type.Number({ description: "Weapon tier 1-5" }),
+        damage_type: Type.Optional(Type.String()),
+        ammo_type: Type.Optional(Type.String()),
+      })),
     }),
     async execute(_toolCallId, params) {
       if (params.mode === "seed") {
@@ -36,7 +42,14 @@ export function registerLegendaryGenTool(pi: ExtensionAPI) {
             isError: true,
           };
         }
-        const warnStr = result.warnings.length > 0 ? `\n⚠️ Warnings:\n${result.warnings.map(w => `  • ${w}`).join("\n")}` : "";
+        // Weapon-appropriateness check (optional)
+        let allWarnings = [...result.warnings];
+        if (params.weapon_context) {
+          const wc = params.weapon_context;
+          const wv = validateLegendaryForWeapon(params.effect as any, wc as any);
+          allWarnings = [...allWarnings, ...wv.warnings];
+        }
+        const warnStr = allWarnings.length > 0 ? `\n⚠️ Warnings:\n${allWarnings.map(w => `  • ${w}`).join("\n")}` : "";
         return {
           content: [{ type: "text", text: `✅ Legendary effect "${params.effect.name}" is valid.${warnStr}` }],
           details: result,

@@ -510,13 +510,20 @@ POI 之间的连接（局部地图路径）。
 ### 5.2 combat.ts — 战斗裁定
 
 - **接口**：`combatResolve(input: CombatInput): CombatResult`
-- **流程**：命中判定 → 伤害计算 → 元素触发 → 传奇特效 → HP 结算
+- **流程**：命中判定 → 暴击判定 → 伤害计算 → 元素触发 → 传奇双阶段触发 → HP 结算
+- **架构**：双表驱动——25 种触发条件（TRIGGER_CONDITIONS）+ 25 种效果处理器（EFFECT_HANDLERS），组合覆盖 625 种传奇特效。通过 LegendaryModifications 累积器模式合并多个修饰符。
 - **命中公式**：`hitThreshold = max(0, round((effectiveAccuracy - effectiveEvasion) * 100))`
   - `effectiveAccuracy = weapon.accuracy + (perception-5)*0.02 + (agility-5)*0.02`
   - `effectiveEvasion = defender.evasion + (defender.agility-5)*0.02`
-- **伤害公式**：`finalDamage = rawDamage + floor(strength/4) - armor`
+- **暴击公式**：`critThreshold = max(0, round(crit_chance * 100))`（默认 5%），暴击 damage ×1.5
+- **伤害公式**：`finalDamage = round(postArmor × critMultiplier × postArmorMultiplier + postArmorFlat)`
+  - 护甲吸收前：`preArmor = rawDamage + floor(strength/4)`
+  - 传奇可修改护甲穿透（armor_pierce）和减甲（armor_shred）
 - **元素触发**：`rollD100() <= proc_chance * 100`
-- **传奇处理**：`on_hit` 触发器 → `multiply_damage` / `lifesteal` / `aoe_explosion`
+- **传奇双阶段**：
+  - Stage 1（pre-damage）：命中后、伤害结算前触发（on_hit/on_crit/on_attack_start 等）
+  - Stage 2（post-damage）：伤害结算后触发（on_kill/on_overkill/on_finishing_blow 等）
+- **CombatFlag**：10 种战斗标记（stealth/counter_attack/reload/empty_mag/full_mag/weapon_jam/first_blood/reflect/dodge/parry），通过 flags 参数传入，部分触发器依赖标记
 - **依赖**：无
 
 ### 5.3 skill-check.ts — 属性/技能检定
@@ -592,12 +599,13 @@ POI 之间的连接（局部地图路径）。
 - **奖励**：属性点 +1/级，技能点 +3/级
 - **依赖**：无
 
-### 5.12 legendary-gen.ts — 传奇特效生成
+### 5.12 legendary-gen.ts — 传奇特效生成与校验
 
-- **接口**：`generateSeed()`, `validateLegendaryEffect(input)`
-- **触发类型**（7 种）：on_hit, on_kill, on_crit, on_reload, on_empty_mag, on_low_hp, on_miss
-- **效果类型**（7 种）：multiply_damage, aoe_explosion, lifesteal, refill_ammo, chain_lightning, summon, debuff_enemy
-- **Tier 上限**：tier 1→3.0, tier 2→5.0, tier 3→7.0, tier 4→9.0, tier 5→10.0
+- **接口**：`generateSeed()`, `validateLegendaryEffect(input)`, `validateLegendaryForWeapon(effect, ctx)`, `magnitudeRangeFor(effectType)`
+- **触发类型**（25 种）：on_hit / on_crit / on_miss / on_kill / on_attack_start / on_damage_dealt / on_overkill / on_armor_pierce / on_low_attacker_hp / on_low_defender_hp / on_parry / on_reload / on_empty_mag / on_ammo_low / on_full_mag / on_weapon_jam / on_elemental_proc / on_stealth_attack / on_counter_attack / on_finishing_blow / on_berserk / on_last_stand / on_first_blood / on_reflect / on_wound
+- **效果类型**（25 种）：multiply_damage / add_flat_damage / lifesteal / life_drain / aoe_explosion / chain_lightning / armor_pierce / armor_shred / stun / bleed / burn / poison / frost_slow / shock_proc / mental_break / disarm / debuff_attack / debuff_defense / buff_attack / buff_accuracy / buff_evasion / summon_ally / refill_ammo / shield / reflect_damage
+- **generateSeed()**：从 25 种触发器和 25 种效果中随机选取，按效果类型从 6 组 magnitude 范围中取值（详见第 15 节）
+- **validateLegendaryForWeapon()**：武器适配性校验——检测 ranged-only 触发器误配近战、refill_ammo 误配近战、reflect_damage 误配远程、低 tier 召唤等不匹配组合，返回 warnings
 - **依赖**：无
 
 ### 5.13 weapon-gen.ts — 武器随机生成
@@ -681,6 +689,22 @@ POI 之间的连接（局部地图路径）。
 - **逻辑**：内置 39 个工具的完整参数 schema 和示例
 - **依赖**：无
 
+### 5.23 armor-gen.ts — 防具随机生成器
+
+- **接口**：`generateArmor(input: GenerateArmorInput): GenerateArmorResult`
+- **逻辑**：稀有度摇表 → 防具类型选择（head/chest/legs）→ 基础属性计算（defense/weight/value）→ 传奇特效（legendary 必得）
+- **传奇生成**：防具传奇采用触发-效果双表架构（14 触发器 × 15 效果 = 210 种组合），详见第 15.2 节
+- **适配性校验**：生成后自动调用 `validateLegendaryForArmor()`，检测防具类型与特效的匹配性，不匹配时返回 `appropriateness_warnings`
+- **依赖**：`legendary-gen.ts`
+
+### 5.24 accessory-gen.ts — 饰品随机生成器
+
+- **接口**：`generateAccessory(input: GenerateAccessoryInput): GenerateAccessoryResult`
+- **逻辑**：稀有度摇表 → 饰品类型选择 → 基础属性计算 → 传奇特效（legendary 必得）
+- **传奇生成**：饰品传奇采用触发-效果双表架构（10 触发器 × 17 效果 = 170 种组合），分布在 6 个 engine 模块中实现（combat/exploration/loot-gen/trade/craft/consume），详见第 15.3 节
+- **适配性校验**：生成后自动调用校验函数，不匹配时返回 `appropriateness_warnings`
+- **依赖**：`legendary-gen.ts`
+
 ---
 
 ## 6. 属性与技能系统
@@ -728,22 +752,59 @@ combat_resolve(input)
  │     hitThreshold = max(0, round((effectiveAccuracy - effectiveEvasion) * 100))
  │     hitRoll = d100; hit = hitRoll <= hitThreshold
  │
- ├─ 2. 未命中 → 返回 { hit: false, hp_remaining, killed: false }
+ ├─ 2. 未命中 → 检查武器传奇 on_miss / on_parry 触发器
+ │     → 检查防具传奇 on_dodged / on_block 触发器
+ │     → 返回 { hit: false, hp_remaining, killed: false }
  │
- ├─ 3. 伤害计算
+ ├─ 3. 暴击判定
+ │     critThreshold = max(0, round(crit_chance * 100))（默认 5%）
+ │     critRoll = d100; crit = critRoll <= critThreshold
+ │     → 暴击时标记，后续触发防具传奇 on_crit_taken
+ │
+ ├─ 4. 基础伤害计算
  │     rawDamage = rollBetween(damage_min, damage_max)
  │     strengthBonus = floor(strength / 4)
- │     beforeArmor = rawDamage + strengthBonus
- │     absorbed = min(armor, beforeArmor)
- │     finalDamage = beforeArmor - absorbed
+ │     baseDamage = rawDamage + strengthBonus
  │
- ├─ 4. 元素触发
+ ├─ 5. 元素触发
  │     procRoll = d100; elementalProc = procRoll <= proc_chance * 100
+ │     → 元素命中时标记，后续触发防具传奇 on_elemental_hit
  │
- └─ 5. 传奇特效 (trigger = "on_hit" && hit)
-       ├─ multiply_damage: finalDamage *= magnitude
-       ├─ lifesteal: hpRestored = floor(finalDamage * magnitude)
-       └─ aoe_explosion: aoeDamage = round(finalDamage * magnitude)
+ ├─ 6. 武器传奇 Stage 1（pre-damage）
+ │     检查 on_hit / on_crit / on_attack_start / on_damage_dealt /
+ │     on_armor_pierce / on_low_attacker_hp / on_low_defender_hp /
+ │     on_elemental_proc / on_stealth_attack / on_berserk /
+ │     on_last_stand / on_wound / on_full_mag / on_reload 等
+ │     → 累积 LegendaryModifications
+ │
+ ├─ 7. 伤害结算
+ │     preArmor = baseDamage × baseDamageMultiplier + flatPreArmor
+ │     effectiveArmor = max(0, armor - armorShred) × (1 - armorPierce)
+ │     postArmor = max(0, preArmor - effectiveArmor)
+ │     rawFinalDamage = round(postArmor × critMultiplier × postArmorMultiplier + postArmorFlat)
+ │
+ ├─ 8. 防具传奇 Stage 1（伤害修正）
+ │     检查 on_hit_taken / on_crit_taken / on_damage_taken /
+ │     on_heavy_damage / on_elemental_hit / on_low_wearer_hp /
+ │     on_critical_hp / on_debuff_received / passive 等触发器
+ │     → 效果：damage_reduction（减伤）、flat_damage_block（格挡）、
+ │        thorns（荆棘反伤）、reflect_percent（反射）、
+ │        explosive_retaliation（爆炸反击）、elemental_absorption（元素吸收）、
+ │        pain_to_power（痛苦转力量）、retribution（惩戒）
+ │     → 状态：fear_aura（恐惧光环）、status_cleanse（净化）
+ │
+ ├─ 9. 最终 HP 结算
+ │     finalDamage = max(0, rawFinalDamage - armorDamageReduction - flatBlock)
+ │     hpRemaining = max(0, hp - finalDamage)
+ │
+ ├─ 10. 武器传奇 Stage 2（post-damage）
+ │       检查 on_kill / on_overkill / on_finishing_blow 等触发器
+ │       → 如产生额外伤害则重新结算 HP
+ │
+ └─ 11. 防具传奇 Stage 2（post-HP）
+       检查 on_kill_response / on_fatal_hit / last_stand 等触发器
+       → 回复：hp_regen（再生）、emergency_heal（急救）、heal_on_kill（击杀回血）
+       → 属性：stat_boost（属性提升）
 ```
 
 ### 7.2 关键公式
@@ -753,7 +814,61 @@ combat_resolve(input)
 | `effectiveAccuracy = weapon.accuracy + (perception-5)*0.02 + (agility-5)*0.02` | 攻击方法效命中 |
 | `effectiveEvasion = defender.evasion + (defender.agility-5)*0.02` | 防御方法效闪避 |
 | `hitThreshold = max(0, round((effectiveAccuracy - effectiveEvasion) * 100))` | d100 命中阈值 |
-| `damage_final = max(0, rawDamage + floor(strength/4) - armor)` | 护甲吸收后的最终伤害 |
+| `critThreshold = max(0, round(crit_chance * 100))` | d100 暴击阈值（默认 5%） |
+| `finalDamage = round(postArmor × critMultiplier × postArmorMultiplier + postArmorFlat)` | 完整伤害公式（含暴击+传奇） |
+
+### 7.3 CombatInput 新增可选字段
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `attacker.crit_chance` | number (0.0–1.0) | 暴击概率，默认 0.05 |
+| `attacker.flags` | CombatFlag[] | 战斗标记数组（见 7.4） |
+| `attacker.hp` | number | 攻击者当前 HP（用于 on_low_attacker_hp/on_berserk 等触发器） |
+| `attacker.hp_max` | number | 攻击者最大 HP（计算 HP 比例） |
+| `attacker.ammo` | number | 当前弹药数（用于 on_empty_mag/on_full_mag 检测） |
+| `attacker.max_ammo` | number | 最大弹匣容量 |
+| `defender.hp_max` | number | 防御者最大 HP（用于 on_wound/on_low_defender_hp 检测） |
+
+### 7.4 CombatFlag（10 种）
+
+| 标记 | 含义 | 关联触发器 |
+|------|------|-----------|
+| stealth | 潜行攻击 | on_stealth_attack |
+| counter_attack | 反击 | on_counter_attack |
+| reload | 正在装填 | on_reload |
+| empty_mag | 弹匣已空 | on_empty_mag |
+| full_mag | 弹匣已满 | on_full_mag |
+| weapon_jam | 卡壳 | on_weapon_jam |
+| first_blood | 首击 | on_first_blood |
+| reflect | 反弹 | on_reflect |
+| dodge | 闪避 | 防具 on_dodged |
+| parry | 格挡 | on_parry |
+
+### 7.5 防具传奇 CombatInput/CombatResult 扩展字段
+
+防具传奇系统在 combat 引擎中新增以下字段：
+
+**CombatInput 扩展：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `defender.armor` | ArmorStats | 防具属性（defense/base_block_chance 等） |
+| `defender.armor_legendary` | LegendaryEffect | 防具传奇特效定义 |
+| `defender.block_chance` | number (0.0–1.0) | 格挡概率 |
+| `defender.dodge_chance` | number (0.0–1.0) | 闪避概率 |
+
+**CombatResult 扩展：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `armor_legendary_triggered` | boolean | 防具传奇是否触发 |
+| `armor_legendary_effect` | string | 触发的防具效果名称 |
+| `damage_reduced` | number | 防具传奇减伤量 |
+| `damage_reflected` | number | 反伤/反射伤害量 |
+| `thorns_damage` | number | 荆棘伤害量 |
+| `hp_restored_armor` | number | 防具传奇回复量 |
+| `status_applied_to_attacker` | string[] | 施加给攻击者的状态效果 |
+| `status_cleansed` | string[] | 净化掉的状态效果 |
 
 ---
 
@@ -929,39 +1044,223 @@ accessory2 — 饰品2
 
 ---
 
-## 15. 传奇特效
+## 15. 传奇特效系统（武器 + 防具 + 饰品）
 
-### 15.1 生成
+Chronika 传奇系统覆盖三类装备，总计 1005 种传奇组合：
 
-- 传奇武器生成时自动调用 `generateSeed()` 生成 legend 种子
+| 装备类型 | 触发器 | 效果 | 组合数 | 实装引擎 |
+|---------|--------|------|--------|---------|
+| 武器 | 25 | 25 | 625 | combat |
+| 防具 | 14 | 15 | 210 | combat |
+| 饰品 | 10 | 17 | 170 | combat/exploration/loot-gen/trade/craft/consume |
+
+### 15.1 武器传奇
+
+武器传奇系统采用双表驱动架构，25 种触发器 × 25 种效果 = 625 种组合，全部在 combat 引擎实装。
+
+#### 生成
+
+- 传奇武器生成时调用 `generateSeed()` 从 25 种触发器和 25 种效果中随机选取
 - 种子包含：trigger、effect_type、magnitude 范围、description_template
-- 实际 magnitude 从种子范围中随机选取
+- magnitude 按效果类型从 6 组范围中取值（见下方），generateSeed() 在范围内随机取 min/max
+- `generate_weapon` 工具在生成传奇武器后自动调用 `validateLegendaryForWeapon()` 检测武器-特效匹配性，不匹配时返回 `appropriateness_warnings` 提示 GM 重 roll
 
-### 15.2 触发类型（7 种）
+#### 触发类型（25 种）
 
-on_hit / on_kill / on_crit / on_reload / on_empty_mag / on_low_hp / on_miss
+| # | 触发器 | 说明 |
+|---|--------|------|
+| 1 | on_hit | 命中时 |
+| 2 | on_crit | 暴击时 |
+| 3 | on_miss | 未命中时 |
+| 4 | on_kill | 击杀时 |
+| 5 | on_attack_start | 攻击开始时（必定触发） |
+| 6 | on_damage_dealt | 造成伤害时 |
+| 7 | on_overkill | 溢出伤害 ≥ 目标 HP×1.5 时 |
+| 8 | on_armor_pierce | 穿透护甲时 |
+| 9 | on_low_attacker_hp | 攻击者 HP ≤ 25% 时 |
+| 10 | on_low_defender_hp | 防御者 HP ≤ 25% 时 |
+| 11 | on_parry | 防御者格挡时（需 parry 标记） |
+| 12 | on_reload | 装填时（需 reload 标记） |
+| 13 | on_empty_mag | 弹匣为空时 |
+| 14 | on_ammo_low | 弹药不足时（当前弹药 ≤ 弹匣容量 30%） |
+| 15 | on_full_mag | 弹匣已满时 |
+| 16 | on_weapon_jam | 武器卡壳时（需 weapon_jam 标记） |
+| 17 | on_elemental_proc | 元素触发时 |
+| 18 | on_stealth_attack | 潜行攻击时（需 stealth 标记） |
+| 19 | on_counter_attack | 反击时（需 counter_attack 标记） |
+| 20 | on_finishing_blow | 目标 HP ≤ 20% 且被击杀时 |
+| 21 | on_berserk | 攻击者 HP ≤ 50% 时 |
+| 22 | on_last_stand | 攻击者 HP ≤ 10% 时 |
+| 23 | on_first_blood | 首击时（需 first_blood 标记） |
+| 24 | on_reflect | 反弹时（需 reflect 标记） |
+| 25 | on_wound | 单次伤害 ≥ 目标 HP 上限 25% 时 |
 
-### 15.3 效果类型（7 种）
+> **词条变化**：`on_dodge` 已删除，新增 `on_ammo_low`；`fear` + `confuse` 合并为 `mental_break`，新增 `disarm`。
+
+#### 效果类型（25 种）
 
 | 效果 | 战斗实现 |
 |------|---------|
-| multiply_damage | `finalDamage *= magnitude` |
-| lifesteal | `hpRestored = floor(finalDamage * magnitude)` |
-| aoe_explosion | `aoeDamage = round(finalDamage * magnitude)` |
-| refill_ammo | （未在 combat 实现，GM 叙事裁决） |
-| chain_lightning | （未在 combat 实现，GM 叙事裁决） |
-| summon | （未在 combat 实现，GM 叙事裁决） |
-| debuff_enemy | （未在 combat 实现，GM 叙事裁决） |
+| multiply_damage | `finalDamage *= magnitude`（倍率 1.2–4.0） |
+| add_flat_damage | `finalDamage += magnitude`（固定值 3–15） |
+| lifesteal | `hpRestored = floor(damage * magnitude)`（吸取比例 0.1–0.6） |
+| life_drain | 伤害 + 吸血双重效果（吸取比例 0.1–0.6） |
+| aoe_explosion | `aoeDamage = round(damage * magnitude)`（倍率 1.2–4.0） |
+| chain_lightning | `chainDamage` + `chainTargets = 3`（倍率 1.2–4.0） |
+| armor_pierce | 按比例无视护甲（magnitude 0.1–1.0 = 10%–100%） |
+| armor_shred | 减甲 debuff（固定值 3–15） |
+| stun | 眩晕状态（持续 1–5 回合） |
+| bleed | 基于伤害 20% × magnitude 的流血 DOT（持续 3 回合） |
+| burn | 基于伤害 25% × magnitude 的灼烧 DOT（持续 2 回合） |
+| poison | 基于伤害 15% × magnitude 的中毒 DOT（持续 4 回合） |
+| frost_slow | 减速 debuff（持续 1–5 回合） |
+| shock_proc | 额外电击伤害（倍率 1.2–4.0） + shock 状态 |
+| mental_break | 精神崩溃（恐惧+混乱合并，持续 1–5 回合） |
+| disarm | 缴械（卸除目标武器，持续 1–5 回合） |
+| debuff_attack | 削弱攻击 debuff（持续 1–5 回合） |
+| debuff_defense | 削弱防御 debuff（持续 1–5 回合） |
+| buff_attack | 攻击 buff（持续 1–5 回合） |
+| buff_accuracy | 命中 buff（持续 1–5 回合） |
+| buff_evasion | 闪避 buff（持续 1–5 回合） |
+| summon_ally | 召唤盟友（返回结构化数据供 GM 叙事，power × magnitude） |
+| refill_ammo | 装填弹药（magnitude × 弹匣容量，范围 0.3–1.5） |
+| shield | 获得护盾值（固定值 3–15） |
+| reflect_damage | 反弹伤害（倍率 1.2–4.0） |
 
-### 15.4 Tier 上限
+#### Magnitude 范围（按效果类型分 6 组）
 
-| tier | 最大 magnitude |
-|------|---------------|
-| 1 | 3.0 |
-| 2 | 5.0 |
-| 3 | 7.0 |
-| 4 | 9.0 |
-| 5 | 10.0 |
+| 组 | 效果类型 | magnitude 范围 | 含义 |
+|----|---------|---------------|------|
+| 伤害倍率 | multiply_damage, aoe_explosion, chain_lightning, shock_proc, reflect_damage | 1.2–4.0 | 伤害倍率 |
+| 吸血 | lifesteal, life_drain | 0.1–0.6 | 吸血比例 |
+| 固定值 | add_flat_damage, shield, armor_shred | 3–15 | 固定点数 |
+| 护甲穿透 | armor_pierce | 0.1–1.0 | 穿透比例（10%–100%） |
+| 回合数 | stun, bleed, burn, poison, frost_slow, mental_break, disarm, debuff_attack, debuff_defense, buff_attack, buff_accuracy, buff_evasion, summon_ally | 1–5 | 持续回合数 |
+| 弹药 | refill_ammo | 0.3–1.5 | 弹匣比例 |
+
+Tier 上限仍适用：tier 1→3.0, tier 2→5.0, tier 3→7.0, tier 4→9.0, tier 5→10.0。超出上限的 magnitude 在 validate 时产生 warning。
+
+#### Combat 实现架构
+
+采用双表驱动 + 累积器模式：
+
+- **TRIGGER_CONDITIONS** 表：25 个条件函数，签名 `(ctx: TriggerContext) => boolean`，检查 flag 组合、HP 比例、命中/暴击状态等
+- **EFFECT_HANDLERS** 表：25 个效果处理器，签名 `(effect, mods: LegendaryModifications, ctx) => void`，写入累积器
+- **resolveLegendary(input, ctx)**：查 TRIGGER_CONDITIONS → 条件满足则调 EFFECT_HANDLERS → 返回是否触发
+- **LegendaryModifications** 累积器：收集所有修饰符（倍率、穿透、DOT、状态、召唤等），在计算最终伤害时统一应用
+- 双阶段调度：pre-damage 阶段处理命中/暴击类触发器，post-damage 阶段处理击杀/溢出类触发器
+
+### 15.2 防具传奇
+
+防具传奇在 combat 引擎中实装，14 种触发器 × 15 种效果 = 210 种组合。结算时机在武器传奇处理完毕、伤害值确定之后、最终 HP 扣除之前（见 7.1 判定流程第 8、11 步）。
+
+#### 触发类型（14 种）
+
+| # | 触发器 | 说明 |
+|---|--------|------|
+| 1 | on_hit_taken | 被命中时 |
+| 2 | on_crit_taken | 被暴击时 |
+| 3 | on_damage_taken | 受到伤害时（必定触发） |
+| 4 | on_heavy_damage | 单次伤害 ≥ 最大 HP 30% 时 |
+| 5 | on_block | 成功格挡时 |
+| 6 | on_dodged | 成功闪避时 |
+| 7 | on_low_wearer_hp | 穿戴者 HP ≤ 50% 时 |
+| 8 | on_critical_hp | 穿戴者 HP ≤ 25% 时 |
+| 9 | on_combat_start | 战斗开始时 |
+| 10 | on_kill_response | 穿戴者击杀敌人时 |
+| 11 | on_debuff_received | 受到 debuff 时 |
+| 12 | on_elemental_hit | 受到元素伤害时 |
+| 13 | on_fatal_hit | 受到致命伤害时 |
+| 14 | passive | 被动常驻（无条件触发） |
+
+#### 效果类型（15 种）
+
+| 效果 | 战斗实现 |
+|------|---------|
+| damage_reduction | 按比例减伤（magnitude 0.1–0.5 = 10%–50%） |
+| flat_damage_block | 固定值格挡伤害（magnitude 3–15） |
+| thorns | 固定反伤（magnitude 3–15，每次被命中反弹） |
+| reflect_percent | 按比例反射伤害（magnitude 0.1–0.4 = 10%–40%） |
+| hp_regen | 每回合回复 HP（magnitude 1–5） |
+| emergency_heal | HP 低于阈值时一次性回血（magnitude 5–25） |
+| heal_on_kill | 击杀时回复 HP（magnitude 3–15） |
+| explosive_retaliation | 受到伤害时爆炸反击（magnitude 1.2–3.0 倍率） |
+| elemental_absorption | 元素伤害转为治疗（magnitude 0.2–0.6 = 20%–60%） |
+| status_cleanse | 清除 debuff（magnitude 1–3，每次触发清除数量） |
+| fear_aura | 攻击者命中后概率恐惧（magnitude 1–5 回合） |
+| pain_to_power | 受到伤害时叠加攻击增益（magnitude 1–5 层） |
+| last_stand | 致命伤害时保留 1 HP（magnitude 1–3 触发次数） |
+| stat_boost | 触发时提升属性（magnitude 1–5 回合） |
+| retribution | 根据已损失 HP 比例增加反伤（magnitude 0.1–0.5） |
+
+#### 双表架构与结算时机
+
+防具传奇采用与武器传奇相同的双表驱动模式：
+
+- **ARMOR_TRIGGER_CONDITIONS**：14 个条件函数，检查命中标记、HP 比例、伤害阈值等
+- **ARMOR_EFFECT_HANDLERS**：15 个效果处理器，写入 LegendaryModifications 累积器
+
+结算分两个阶段：
+
+1. **Stage 1（伤害修正阶段）**：在武器传奇 pre-damage 和伤害计算完成后触发。处理 `on_hit_taken`、`on_crit_taken`、`on_damage_taken`、`on_heavy_damage`、`on_elemental_hit`、`on_low_wearer_hp`、`on_critical_hp`、`on_debuff_received`、`passive`。效果包括减伤、格挡、反伤、爆炸反击、元素吸收、恐惧光环、净化、属性增益等，所有修正累积后在最终 HP 结算时统一应用。
+
+2. **Stage 2（击杀/致命后阶段）**：在 HP 结算后触发。处理 `on_kill_response`、`on_fatal_hit`、`last_stand`。效果包括击杀回血、急救、濒死锁血等。
+
+### 15.3 饰品传奇
+
+饰品传奇分布在 6 个 engine 模块中实现，10 种触发器 × 17 种效果 = 170 种组合。
+
+#### 触发类型（10 种）
+
+| # | 触发器 | 说明 | 所属模块 |
+|---|--------|------|---------|
+| 1 | on_combat_action | 战斗行动时 | combat |
+| 2 | on_exploration | 探索触发时 | exploration |
+| 3 | on_loot | 获得掉落时 | loot-gen |
+| 4 | on_trade | 交易完成时 | trade |
+| 5 | on_craft | 制作完成时 | craft |
+| 6 | on_consume | 使用消耗品时 | consume |
+| 7 | on_low_hp | 穿戴者 HP ≤ 30% 时 | combat |
+| 8 | on_status_applied | 被施加状态时 | combat |
+| 9 | on_kill | 击杀敌人时 | combat |
+| 10 | passive | 被动常驻 | 全部模块 |
+
+#### 效果类型（17 种）
+
+| 效果 | 实现方式 | 所属模块 |
+|------|---------|---------|
+| bonus_damage | 战斗伤害加成 | combat |
+| accuracy_boost | 命中加成 | combat |
+| evasion_boost | 闪避加成 | combat |
+| loot_quality_up | 掉落品质提升 | loot-gen |
+| extra_loot_roll | 额外掉落掷骰 | loot-gen |
+| discovery_bonus | 探索发现加成 | exploration |
+| travel_speed | 旅行速度提升 | exploration |
+| trade_discount | 交易折扣 | trade |
+| sell_bonus | 卖价加成 | trade |
+| craft_yield | 制作产量加成 | craft |
+| craft_quality | 制作品质提升 | craft |
+| consume_boost | 消耗品效果加成 | consume |
+| consume_duration | 消耗品持续延长 | consume |
+| hp_regen_accessory | 被动 HP 再生 | combat |
+| status_resist | 状态抗性提升 | combat |
+| xp_boost | 经验获取加成 | combat |
+| credit_find | 瓶盖掉落加成 | loot-gen |
+
+#### 模块分布架构
+
+饰品传奇的效果按模块分布在对应的 engine 函数中：
+
+| 模块 | 文件 | 效果数 | 说明 |
+|------|------|--------|------|
+| combat | `combat.ts` | 7 | bonus_damage / accuracy_boost / evasion_boost / hp_regen_accessory / status_resist / xp_boost 及 on_low_hp/on_status_applied/on_kill 触发 |
+| exploration | `exploration.ts` | 2 | discovery_bonus / travel_speed |
+| loot-gen | `loot-gen.ts` | 3 | loot_quality_up / extra_loot_roll / credit_find |
+| trade | `trade.ts` | 2 | trade_discount / sell_bonus |
+| craft | `craft.ts` | 2 | craft_yield / craft_quality |
+| consume | `consume.ts` | 2 | consume_boost / consume_duration |
+
+各模块独立读取饰品的传奇特效定义，在对应工具调用时按触发条件判定并应用效果。与武器/防具传奇不同，饰品传奇不集中在单个引擎函数，而是分散到各功能模块中按需执行。
 
 ---
 
@@ -1010,7 +1309,7 @@ REFACTOR →  reviewer 角色审查
 | engine/validation/ | 5 | 覆盖 5 个校验器 |
 | db/ | 3 | connection + schema + seed 验证 |
 | tools/ | 1 | 工具注册集成测试 |
-| **合计** | **29** | 共约 297 个测试用例 |
+| **合计** | **31** | 共 398 个测试用例 |
 
 ### 17.4 关键原则
 

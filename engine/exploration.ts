@@ -3,6 +3,8 @@
 // 提供 discoverLocation / travel / explore / getKnownMap 四个纯函数，
 // 直接操作 sql.js Database 实例。
 
+import type { AccessoryData } from "./legendary-gen.ts";
+
 function rollD100(): number {
   return Math.floor(Math.random() * 100) + 1;
 }
@@ -95,6 +97,7 @@ export interface TravelInput {
   target_location: string;
   stealth?: number;
   tracking?: number;
+  accessories?: AccessoryData[];
 }
 
 export interface TravelEncounter {
@@ -112,10 +115,30 @@ export interface TravelResult {
   encounter: TravelEncounter;
   tracking_discovery?: boolean;
   tracking_detail?: string;
+  accessory_stealth_bonus?: number;
+  accessory_danger_sense?: boolean;
+  accessory_movement_speed?: number;
   error?: string;
 }
 
+/** 汇总旅行类饰品（on_travel / passive 触发器）的加成。 */
+function travelAccessoryBonuses(accessories: AccessoryData[] | undefined) {
+  let stealthBonus = 0;
+  let movementSpeed = 0;
+  let dangerSense = false;
+  for (const acc of accessories ?? []) {
+    if (acc.trigger !== "on_travel" && acc.trigger !== "passive") continue;
+    if (acc.effect_type === "stealth_field") stealthBonus += acc.magnitude;
+    else if (acc.effect_type === "movement_speed") movementSpeed += acc.magnitude;
+    else if (acc.effect_type === "danger_sense") dangerSense = true;
+  }
+  return { stealthBonus, movementSpeed, dangerSense };
+}
+
 export function travel(db: any, input: TravelInput): TravelResult {
+  // 饰品加成（stealth_field 降低遭遇率 / danger_sense 预警 / movement_speed 加速）
+  const accBonus = travelAccessoryBonuses(input.accessories);
+
   // Check if target exists
   const targetResult = queryExec(db, "SELECT name FROM locations WHERE name = ?", [input.target_location]);
   if (targetResult.length === 0 || targetResult[0].values.length === 0) {
@@ -166,8 +189,9 @@ export function travel(db: any, input: TravelInput): TravelResult {
     const toDanger = toDangerResult.length > 0 ? (toDangerResult[0].values[0]?.[0] as number) ?? 1 : 1;
     const avgDanger = (fromDanger + toDanger) / 2;
     const encounterChance = avgDanger * 0.12 + 0.08;
-    // Apply stealth reduction
-    const stealthMod = input.stealth ? (1.0 - input.stealth * 0.03) : 1.0;
+    // Apply stealth reduction (角色隐匿 + 饰品 stealth_field)
+    const totalStealth = (input.stealth ?? 0) + accBonus.stealthBonus;
+    const stealthMod = totalStealth ? Math.max(0, 1.0 - totalStealth * 0.03) : 1.0;
     const finalChance = encounterChance * stealthMod;
 
     if (Math.random() < finalChance) {
@@ -197,7 +221,18 @@ export function travel(db: any, input: TravelInput): TravelResult {
     }
   }
 
-  return { success: true, from: input.current_location, to: input.target_location, distance_km: distance, encounter, tracking_discovery: trackingDiscovery || undefined, tracking_detail: trackingDetail };
+  return {
+    success: true,
+    from: input.current_location,
+    to: input.target_location,
+    distance_km: distance,
+    encounter,
+    tracking_discovery: trackingDiscovery || undefined,
+    tracking_detail: trackingDetail,
+    accessory_stealth_bonus: accBonus.stealthBonus > 0 ? accBonus.stealthBonus : undefined,
+    accessory_danger_sense: accBonus.dangerSense && encounter.triggered ? true : undefined,
+    accessory_movement_speed: accBonus.movementSpeed > 0 ? accBonus.movementSpeed : undefined,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -206,6 +241,7 @@ export function travel(db: any, input: TravelInput): TravelResult {
 
 export interface ExploreInput {
   location_name: string;
+  accessories?: AccessoryData[];
 }
 
 export interface ExploreResult {
@@ -219,8 +255,12 @@ export interface ExploreResult {
   discoveries: string[];
   encounter?: TravelEncounter;
   current_poi?: string;
+  accessory_resource_found?: string;
   error?: string;
 }
+
+/** resource_sense 饰品可发现的资源列表 */
+const EXPLORE_RESOURCES = ["废金属", "净水", "草药", "木材", "布料", "罐头"];
 
 export function explore(db: any, input: ExploreInput): ExploreResult {
   const locResult = queryExec(db, "SELECT description, danger_level, has_shelter FROM locations WHERE name = ?", [input.location_name]);
@@ -281,7 +321,17 @@ export function explore(db: any, input: ExploreInput): ExploreResult {
     if (encounter?.triggered) break;
   }
 
-  return { location_name: input.location_name, description, danger_level: dangerLevel, has_shelter: hasShelter === 1, pois, available_connections: availableConnections, cross_location_exits: crossLocationExits, discoveries, encounter };
+  // 饰品 resource_sense：概率发现额外资源
+  let accessoryResourceFound: string | undefined;
+  for (const acc of input.accessories ?? []) {
+    if (acc.trigger !== "on_explore" && acc.trigger !== "passive") continue;
+    if (acc.effect_type !== "resource_sense") continue;
+    if (Math.random() < acc.magnitude) {
+      accessoryResourceFound = EXPLORE_RESOURCES[Math.floor(Math.random() * EXPLORE_RESOURCES.length)];
+    }
+  }
+
+  return { location_name: input.location_name, description, danger_level: dangerLevel, has_shelter: hasShelter === 1, pois, available_connections: availableConnections, cross_location_exits: crossLocationExits, discoveries, encounter, accessory_resource_found: accessoryResourceFound };
 }
 
 // ---------------------------------------------------------------------------

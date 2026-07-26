@@ -2,12 +2,20 @@ import { describe, it } from "node:test";
 import assert from "node:assert";
 import { trade } from "../../engine/trade.ts";
 
+interface AccessoryData {
+  name: string;
+  trigger: string;
+  effect_type: string;
+  magnitude: number;
+}
+
 interface TradeInput {
   credits: number;
   items: { item_name: string; quantity: number; price_per_unit: number }[];
   mode: "buy" | "sell";
   price_modifier?: number;
   barter?: number;
+  accessories?: AccessoryData[];
 }
 
 describe("trade", () => {
@@ -166,5 +174,67 @@ describe("trade", () => {
     assert.strictEqual(result.credits_after, 68);
   });
 
+  // --- 饰品传奇系统 (Cycle 2) ------------------------------------
 
+  it("should reduce buy price when trade_discount accessory is present", () => {
+    // Arrange
+    const baseInput: TradeInput = {
+      credits: 100,
+      items: [{ item_name: "剑", quantity: 1, price_per_unit: 50 }],
+      mode: "buy",
+    };
+    const discountInput: TradeInput = {
+      credits: 100,
+      items: [{ item_name: "剑", quantity: 1, price_per_unit: 50 }],
+      mode: "buy",
+      accessories: [{ name: "商人徽章", trigger: "on_trade", effect_type: "trade_discount", magnitude: 0.2 }],
+    };
+
+    // Act
+    const baseResult = trade(baseInput);
+    const discountResult = trade(discountInput);
+
+    // Assert
+    assert.strictEqual(baseResult.success, true);
+    assert.strictEqual(discountResult.success, true);
+    assert.ok(
+      discountResult.total_cost < baseResult.total_cost,
+      `expected discount total_cost (${discountResult.total_cost}) < base (${baseResult.total_cost})`
+    );
+    assert.ok(
+      ((discountResult as any).accessory_discount ?? 0) > 0,
+      `expected accessory_discount > 0, got ${(discountResult as any).accessory_discount}`
+    );
+  });
+
+  it("should increase sell price when sell_bonus accessory is present", () => {
+    // Arrange
+    const baseInput: TradeInput = {
+      credits: 50,
+      items: [{ item_name: "废铁", quantity: 1, price_per_unit: 20 }],
+      mode: "sell",
+    };
+    const bonusInput: TradeInput = {
+      credits: 50,
+      items: [{ item_name: "废铁", quantity: 1, price_per_unit: 20 }],
+      mode: "sell",
+      accessories: [{ name: "推销员戒指", trigger: "on_trade", effect_type: "sell_bonus", magnitude: 0.2 }],
+    };
+
+    // Act
+    const baseResult = trade(baseInput);
+    const bonusResult = trade(bonusInput);
+
+    // Assert
+    assert.strictEqual(baseResult.success, true);
+    assert.strictEqual(bonusResult.success, true);
+    assert.ok(
+      bonusResult.total_cost > baseResult.total_cost,
+      `expected sell bonus total_cost (${bonusResult.total_cost}) > base (${baseResult.total_cost})`
+    );
+    assert.ok(
+      ((bonusResult as any).accessory_sell_bonus ?? 0) > 0,
+      `expected accessory_sell_bonus > 0, got ${(bonusResult as any).accessory_sell_bonus}`
+    );
+  });
 });

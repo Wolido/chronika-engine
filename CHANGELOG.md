@@ -1,5 +1,37 @@
 # Changelog
 
+## [0.5.0] - 2026-07-26
+
+### Added
+
+- 武器传奇系统：从 7×7 扩展到 25 触发器 × 25 效果类型 = 625 种组合，全部在 combat 引擎实装
+- 新增触发器（17 种）：on_attack_start, on_damage_dealt, on_overkill, on_armor_pierce, on_low_attacker_hp, on_low_defender_hp, on_parry, on_full_mag, on_weapon_jam, on_elemental_proc, on_stealth_attack, on_counter_attack, on_finishing_blow, on_berserk, on_last_stand, on_first_blood, on_reflect, on_wound
+- 新增效果类型（17 种）：add_flat_damage, life_drain, armor_pierce, armor_shred, stun, bleed, burn, poison, frost_slow, shock_proc, mental_break, debuff_attack, debuff_defense, buff_attack, buff_accuracy, buff_evasion, summon_ally, refill_ammo, shield, reflect_damage
+- 防具传奇系统：14 触发器 × 15 效果 = 210 种组合，全部在 combat 引擎实装
+- 防具触发器：on_hit_taken, on_crit_taken, on_damage_taken, on_heavy_damage, on_block, on_dodged, on_low_wearer_hp, on_critical_hp, on_combat_start, on_kill_response, on_debuff_received, on_elemental_hit, on_fatal_hit, passive
+- 防具效果：damage_reduction, flat_damage_block, thorns, reflect_percent, hp_regen, emergency_heal, heal_on_kill, explosive_retaliation, elemental_absorption, status_cleanse, fear_aura, pain_to_power, last_stand, stat_boost, retribution
+- 饰品传奇系统：10 触发器 × 17 效果 = 170 种组合，分布在 6 个 engine 模块（combat/exploration/loot-gen/trade/craft/consume）
+- generate_armor 和 generate_accessory 工具（含 appropriateness_warnings GM 审查流程）
+- 暴击系统：combat 新增 crit_chance 参数（默认 5%），暴击时伤害 ×1.5，支持 on_crit 传奇触发器
+- 双阶段传奇触发架构：pre-damage（命中/暴击/攻击开始等）+ post-damage（击杀/溢出/终结等）
+- CombatFlag 系统：10 种战斗标记（stealth, counter_attack, reload, empty_mag, full_mag, weapon_jam, first_blood, reflect, dodge, parry），通过 flags 参数传入
+- generate_weapon 返回 appropriateness_warnings，武器-特效不匹配时提示 GM 重 roll
+- legendary_gen 新增 weapon_context 参数，validate 模式支持 validateLegendaryForWeapon() 武器适配性检查
+- magnitude 按效果类型返回 6 组不同范围，替代旧版统一范围
+
+### Changed
+
+- combat.ts 重构为双表驱动架构（TRIGGER_CONDITIONS + EFFECT_HANDLERS），LegendaryModifications 累积器模式
+- CombatInput 新增 7 个可选字段（crit_chance, flags, hp, hp_max, ammo, max_ammo, defender.hp_max）
+- CombatResult 新增 20+ 字段（crit, legendary_aoe_damage, legendary_status_*, legendary_summon 等）
+- 传奇武器生成后自动附带适配性警告
+- tools 层 schema 全部更新为 25×25 描述
+- 旧效果 refill_ammo/chain_lightning/summon/debuff_enemy 从"GM 叙事裁决"改为完整 engine 实现
+
+### Tests
+
+- 测试用例：398 个（+67 新增：武器修正、防具传奇、饰品传奇、生成器测试）
+
 ## [Unreleased]
 
 ### Added

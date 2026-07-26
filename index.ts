@@ -12,6 +12,8 @@ import { registerStatusRuntimeTools } from "./tools/status-runtime";
 import { registerLevelUpTool } from "./tools/level-up";
 import { registerLegendaryGenTool } from "./tools/legendary-gen";
 import { registerWeaponGenTool } from "./tools/weapon-gen";
+import { registerArmorGenTool } from "./tools/armor-gen";
+import { registerAccessoryGenTool } from "./tools/accessory-gen";
 import { registerEquipTools } from "./tools/equip";
 import { registerEventLogTools } from "./tools/event-log";
 import { registerExplorationTools } from "./tools/exploration";
@@ -38,6 +40,8 @@ export default function (pi: ExtensionAPI) {
   registerLevelUpTool(pi);
   registerLegendaryGenTool(pi);
   registerWeaponGenTool(pi);
+  registerArmorGenTool(pi);
+  registerAccessoryGenTool(pi);
   registerEquipTools(pi);
   registerEventLogTools(pi);
   registerExplorationTools(pi);

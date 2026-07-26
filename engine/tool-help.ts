@@ -38,11 +38,24 @@ const TOOLS: Record<string, ToolHelp> = {
 
   combat_resolve: {
     name: "combat_resolve",
-    description: "一键战斗裁定（命中+伤害+元素+传奇）",
+    description: "一键战斗裁定（命中+暴击+伤害+元素+传奇特效）。支持 25 种触发器 × 25 种效果类型 = 625 种传奇组合",
     parameters: [
-      { name: "attacker", type: "object", required: true, description: "攻击者信息，包含 stats (strength/agility/endurance/perception/intelligence/willpower 各1-20)、weapon (damage_min/damage_max/accuracy/damage_type)、可选的 element 和 legendary 效果" },
-      { name: "defender", type: "object", required: true, description: "防御者信息，包含 evasion (0-1)、armor、hp" },
+      { name: "attacker.stats", type: "object", required: true, description: "6属性: strength/agility/endurance/perception/intelligence/willpower (各0-20)" },
+      { name: "attacker.weapon", type: "object", required: true, description: "武器: damage_min/damage_max/accuracy(0-1)/damage_type(slashing/piercing/bludgeoning/thermal/explosive/chemical)" },
+      { name: "attacker.element", type: "object", required: false, description: "元素效果: {element_type(fire/corrosive/shock/frost/explosive), proc_chance(0-1)}" },
+      { name: "attacker.legendary", type: "object", required: false, description: "传奇特效: {effect_name, trigger(25种), effect_type(25种), magnitude}" },
+      { name: "attacker.crit_chance", type: "number", required: false, description: "暴击概率 0.0-1.0 (默认0.05)" },
+      { name: "attacker.flags", type: "array", required: false, description: "战斗标记: stealth/counter_attack/reload/empty_mag/full_mag/weapon_jam/first_blood/reflect/dodge/parry" },
+      { name: "attacker.hp", type: "number", required: false, description: "攻击者当前HP (用于on_low_attacker_hp/on_berserk等触发器)" },
+      { name: "attacker.hp_max", type: "number", required: false, description: "攻击者最大HP" },
+      { name: "attacker.ammo", type: "number", required: false, description: "当前弹药数" },
+      { name: "attacker.max_ammo", type: "number", required: false, description: "最大弹药容量" },
+      { name: "defender.evasion", type: "number", required: true, description: "防御者闪避 0.0-1.0" },
+      { name: "defender.armor", type: "number", required: true, description: "防御者护甲值" },
+      { name: "defender.hp", type: "number", required: true, description: "防御者当前HP" },
+      { name: "defender.hp_max", type: "number", required: false, description: "防御者最大HP" },
     ],
+    example_call: `combat_resolve attacker: {stats: {strength:8,...}, weapon: {damage_min:5,damage_max:10,accuracy:0.75,damage_type:"slashing"}, legendary: {effect_name:"断骨", trigger:"on_crit", effect_type:"bleed", magnitude:3}, crit_chance:0.05}, defender: {evasion:0.2, armor:3, hp:30, hp_max:30}`,
   },
 
   skill_check: {
@@ -246,12 +259,14 @@ const TOOLS: Record<string, ToolHelp> = {
 
   legendary_gen: {
     name: "legendary_gen",
-    description: "传奇特效生成/校验。mode='seed' 生成种子，mode='validate' 校验效果",
+    description: "传奇特效生成/校验。支持25种触发器×25种效果类型",
     parameters: [
-      { name: "mode", type: "string", required: true, description: "seed 或 validate" },
-      { name: "effect", type: "object", required: false, description: "要校验的传奇效果 (validate模式)" },
-      { name: "weapon_tier", type: "number", required: false, description: "武器tier (validate模式)" },
+      { name: "mode", type: "string", required: true, description: "seed(生成种子) 或 validate(校验效果)" },
+      { name: "effect", type: "object", required: false, description: "要校验的效果 {name, trigger(25种之一), effect_type(25种之一), magnitude, description} (validate模式)" },
+      { name: "weapon_tier", type: "number", required: false, description: "武器tier 1-5 (validate模式)", constraints: "1-5" },
+      { name: "weapon_context", type: "object", required: false, description: "武器上下文用于适配性检查 {weapon_type(melee/ranged/thrown), tier, damage_type?, ammo_type?} (validate模式)" },
     ],
+    example_call: `legendary_gen mode: "validate", effect: {name:"断骨", trigger:"on_crit", effect_type:"bleed", magnitude:3, description:"暴击时撕裂伤口"}, weapon_tier: 3, weapon_context: {weapon_type:"melee", tier:3}`,
   },
 
   status_apply: {

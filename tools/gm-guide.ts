@@ -49,10 +49,18 @@ function getGMGuide(topic?: string): string {
 ## 武器与装备
 
 - 敌人掉落武器时调用 \`generate_weapon\` 生成随机武器。
-- \`generate_weapon\` 只生成数值，**名称和传奇特效描述由你发明**。
-- 传奇武器应该让玩家兴奋——效果可以是离谱的、破坏平衡的。
+- 掉落防具时调用 \`generate_armor\`（可选 slot: head/chest/legs）。
+- 掉落饰品时调用 \`generate_accessory\`（可选 accessory_type: ring/amulet/trinket/charm）。
+- 这些生成器只生成数值，**名称和传奇特效描述由你发明**。
+- 传奇装备应该让玩家兴奋——效果可以是离谱的、破坏平衡的。
 - 用 \`equip_item\` / \`unequip_item\` 管理玩家装备。
 - 用 \`equipment_stats\` 查看装备总属性。
+
+### 传奇装备审查
+
+- \`generate_weapon\` / \`generate_armor\` 会返回 \`appropriateness_warnings\`。
+- 如果 trigger/effect 与装备类型明显不匹配（如近战武器出现 on_reload、重甲出现 on_dodged），重新生成。
+- 传奇武器最终用 \`legendary_gen(mode: "validate", ...)\` 检查。
     稀有度掉落概率：
     - 普通敌人: common 60% / uncommon 30% / rare 8% / legendary 2%
     - 精英敌人: common 20% / uncommon 40% / rare 30% / legendary 10%
@@ -158,6 +166,7 @@ skill_check 的 modifier 参数应基于玩家属性计算。
 - 重要敌人或 boss 用 \`generate_weapon\` 生成武器掉落。
 - 普通敌人掉废铁、瓶盖、材料。
 - 传奇武器出现时，你负责给它起名和写描述。
+- 传奇武器需审查 trigger/effect 是否与武器类型匹配（见 gm_guide 完整版「传奇武器审查」）。
 - 掉落品质推荐（参考敌人强度）：
   - tier 1-2: 主 common/uncommon，rare 偶尔，legendary 极稀有
   - tier 3: 主 uncommon/rare，legendary 可能

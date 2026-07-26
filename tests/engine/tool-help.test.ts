@@ -41,25 +41,25 @@ describe("getToolHelp", () => {
     assert.strictEqual(weapons.required, false);
   });
 
-  it("should return found=true and include attacker and defender parameters when querying combat_resolve", () => {
+  it("should return found=true and include attacker.* and defender.* parameters when querying combat_resolve", () => {
     const result = getToolHelp("combat_resolve");
 
     assert.strictEqual(result.found, true);
     assert.strictEqual(result.tool.name, "combat_resolve");
 
     const paramNames = result.tool.parameters.map(p => p.name);
-    assert.ok(paramNames.includes("attacker"), "should have attacker parameter");
-    assert.ok(paramNames.includes("defender"), "should have defender parameter");
+    assert.ok(paramNames.some(n => n.startsWith("attacker.")), "should have attacker.* parameters");
+    assert.ok(paramNames.some(n => n.startsWith("defender.")), "should have defender.* parameters");
 
-    const attacker = result.tool.parameters.find(p => p.name === "attacker")!;
-    assert.strictEqual(attacker.type, "object");
-    assert.strictEqual(attacker.required, true);
-    assert.ok(attacker.description.length > 0, "attacker description should not be empty");
+    const attackerStats = result.tool.parameters.find(p => p.name === "attacker.stats")!;
+    assert.strictEqual(attackerStats.type, "object");
+    assert.strictEqual(attackerStats.required, true);
+    assert.ok(attackerStats.description.length > 0, "attacker.stats description should not be empty");
 
-    const defender = result.tool.parameters.find(p => p.name === "defender")!;
-    assert.strictEqual(defender.type, "object");
-    assert.strictEqual(defender.required, true);
-    assert.ok(defender.description.length > 0, "defender description should not be empty");
+    const defenderEvasion = result.tool.parameters.find(p => p.name === "defender.evasion")!;
+    assert.strictEqual(defenderEvasion.type, "number");
+    assert.strictEqual(defenderEvasion.required, true);
+    assert.ok(defenderEvasion.description.length > 0, "defender.evasion description should not be empty");
   });
 
   it("should return found=false with error containing 'not found' when querying a non-existent tool", () => {

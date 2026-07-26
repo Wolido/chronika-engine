@@ -1,3 +1,5 @@
+import type { AccessoryData } from "./legendary-gen.ts";
+
 export interface ConsumeInput {
   item: {
     name: string;
@@ -9,6 +11,7 @@ export interface ConsumeInput {
     hp_max: number;
   };
   medicine?: number;
+  accessories?: AccessoryData[];
 }
 
 export interface ConsumeResult {
@@ -17,22 +20,41 @@ export interface ConsumeResult {
   hp_after: number;
   hp_change: number;
   detail: string;
+  accessory_heal_bonus?: number;
+  accessory_double_effect?: boolean;
 }
 
 export function consumeItem(input: ConsumeInput): ConsumeResult {
   const { hp, hp_max } = input.target;
   const { effect_type, effect_value } = input.item;
 
+  // 饰品加成（on_heal / passive 触发器）
+  let healingBoost = 0;
+  let doubleEffectChance = 0;
+  for (const acc of input.accessories ?? []) {
+    if (acc.trigger !== "on_heal" && acc.trigger !== "passive") continue;
+    if (acc.effect_type === "healing_boost") healingBoost += acc.magnitude;
+    // Note: item_efficiency only applies to "heal" effect_type.
+    // "damage" and "restore" types are intentionally excluded.
+    else if (acc.effect_type === "item_efficiency") doubleEffectChance += acc.magnitude;
+  }
+
   switch (effect_type) {
     case "heal": {
       const medicineBonus = input.medicine ? Math.floor(input.medicine * 1.5) : 0;
-      const actualHeal = Math.min(effect_value + medicineBonus, hp_max - hp);
+      // healing_boost：额外增加 magnitude × effect_value；item_efficiency：概率效果翻倍
+      const accessoryHealBonus = Math.round(effect_value * healingBoost);
+      const doubleEffect = doubleEffectChance > 0 && Math.random() < doubleEffectChance;
+      const boostedValue = effect_value * (doubleEffect ? 2 : 1);
+      const actualHeal = Math.min(boostedValue + medicineBonus + accessoryHealBonus, hp_max - hp);
       return {
         effect_type: "heal",
         hp_before: hp,
         hp_after: hp + actualHeal,
         hp_change: actualHeal,
         detail: `Healed ${actualHeal} HP (${hp} → ${hp + actualHeal})`,
+        accessory_heal_bonus: accessoryHealBonus > 0 ? accessoryHealBonus : undefined,
+        accessory_double_effect: doubleEffect ? true : undefined,
       };
     }
     case "damage": {

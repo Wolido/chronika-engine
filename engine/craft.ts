@@ -1,3 +1,5 @@
+import type { AccessoryData } from "./legendary-gen.ts";
+
 export interface CraftIngredient {
   item_name: string;
   quantity: number;
@@ -18,6 +20,7 @@ export interface CraftInput {
   recipe: CraftRecipe;
   inventory: InventoryItem[];
   mechanics?: number;
+  accessories?: AccessoryData[];
 }
 
 export interface CraftMissing {
@@ -41,6 +44,8 @@ export interface CraftResult {
   missing_ingredients?: CraftMissing[];
   items_consumed?: CraftConsumed[];
   items_produced?: CraftProduced[];
+  accessory_efficiency_bonus?: number;
+  accessory_material_saved?: string[];
 }
 
 function findInInventory(inventory: InventoryItem[], itemName: string): number {
@@ -52,11 +57,23 @@ export function craftItem(input: CraftInput): CraftResult {
   const missing: CraftMissing[] = [];
   const consumed: CraftConsumed[] = [];
 
-  // Check all ingredients
+  // 饰品加成（on_craft / passive 触发器）
+  let efficiencyBonus = 0;
+  let materialSaveChance = 0;
+  for (const acc of input.accessories ?? []) {
+    if (acc.trigger !== "on_craft" && acc.trigger !== "passive") continue;
+    if (acc.effect_type === "crafting_efficiency") efficiencyBonus += Math.floor(acc.magnitude * 2);
+    else if (acc.effect_type === "material_save") materialSaveChance += acc.magnitude;
+  }
+
+  // Check all ingredients（material_save 触发时该材料不消耗）
+  const materialSaved: string[] = [];
   for (const ing of input.recipe.ingredients) {
     const have = findInInventory(input.inventory, ing.item_name);
     if (have < ing.quantity) {
       missing.push({ item_name: ing.item_name, needed: ing.quantity, have });
+    } else if (materialSaveChance > 0 && Math.random() < materialSaveChance) {
+      materialSaved.push(ing.item_name);
     } else {
       consumed.push({ item_name: ing.item_name, quantity: ing.quantity });
     }
@@ -70,6 +87,8 @@ export function craftItem(input: CraftInput): CraftResult {
   return {
     success: true,
     items_consumed: consumed,
-    items_produced: [{ item_name: input.recipe.result_item, quantity: input.recipe.result_quantity + mechanicsBonus }],
+    items_produced: [{ item_name: input.recipe.result_item, quantity: input.recipe.result_quantity + mechanicsBonus + efficiencyBonus }],
+    accessory_efficiency_bonus: efficiencyBonus > 0 ? efficiencyBonus : undefined,
+    accessory_material_saved: materialSaved.length > 0 ? materialSaved : undefined,
   };
 }

@@ -1,4 +1,4 @@
-import { generateSeed } from "./legendary-gen.ts";
+import { generateSeed, validateLegendaryForWeapon } from "./legendary-gen.ts";
 
 export interface GenerateWeaponInput {
   weapon_type?: string;
@@ -36,6 +36,7 @@ export interface GeneratedWeapon {
 export interface GenerateWeaponResult {
   success: boolean;
   weapon: GeneratedWeapon;
+  appropriateness_warnings?: string[];
   rolls: {
     rarity_roll: number;
     type_roll: number;
@@ -82,6 +83,9 @@ function rollBetween(min: number, max: number): number {
 function rollRarity(minRarity: string, maxRarity: string): { rarity: string; roll: number } {
   const minIdx = RARITIES.indexOf(minRarity);
   const maxIdx = RARITIES.indexOf(maxRarity);
+  if (minIdx === -1) throw new Error(`Invalid min_rarity: "${minRarity}". Must be one of: ${RARITIES.join(", ")}`);
+  if (maxIdx === -1) throw new Error(`Invalid max_rarity: "${maxRarity}". Must be one of: ${RARITIES.join(", ")}`);
+  if (minIdx > maxIdx) throw new Error(`min_rarity "${minRarity}" cannot exceed max_rarity "${maxRarity}"`);
   const roll = Math.floor(Math.random() * (maxIdx - minIdx + 1)) + minIdx;
   return { rarity: RARITIES[roll], roll };
 }
@@ -133,9 +137,11 @@ export function generateWeapon(input: GenerateWeaponInput): GenerateWeaponResult
   // Legendary effect
   let legendaryEffect: GeneratedWeapon["legendary_effect"] | undefined;
   let legendaryRoll: number | undefined;
+  let appropriatenessWarnings: string[] | undefined;
   if (rarity === "legendary") {
     const seed = generateSeed();
-    const mag = rollBetween(Math.ceil(seed.magnitude_min), Math.floor(seed.magnitude_max));
+    // Float roll in [min, max] — some ranges (e.g. lifesteal 0.1–0.6) are sub-1
+    const mag = Math.round((seed.magnitude_min + Math.random() * (seed.magnitude_max - seed.magnitude_min)) * 10) / 10;
     legendaryEffect = {
       effect_name: "",   // LLM fills
       trigger: seed.trigger,
@@ -144,6 +150,14 @@ export function generateWeapon(input: GenerateWeaponInput): GenerateWeaponResult
       description: "",   // LLM fills
     };
     legendaryRoll = Math.floor(Math.random() * 100);
+
+    const validation = validateLegendaryForWeapon(
+      { name: "", trigger: seed.trigger, effect_type: seed.effect_type, magnitude: mag, description: "" },
+      { weapon_type: weaponType, tier, damage_type: damageType, ammo_type: ammoType }
+    );
+    if (validation.warnings.length > 0) {
+      appropriatenessWarnings = validation.warnings;
+    }
   }
 
   const weapon: GeneratedWeapon = {
@@ -159,6 +173,7 @@ export function generateWeapon(input: GenerateWeaponInput): GenerateWeaponResult
   return {
     success: true,
     weapon,
+    appropriateness_warnings: appropriatenessWarnings,
     rolls: {
       rarity_roll: rarityRoll,
       type_roll: WEAPON_TYPES.indexOf(weaponType),
