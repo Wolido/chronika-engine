@@ -170,15 +170,15 @@ export const SEED_ITEMS = [
   { name: "罐头", item_type: "consumable", rarity: "common", value: 12, weight: 0.4, effect_type: "heal", effect_value: 8, stackable: true, stack_max: 10 },
   { name: "止痛药", item_type: "consumable", rarity: "common", value: 10, weight: 0.1, effect_type: "heal", effect_value: 15, stackable: true, stack_max: 15 },
   { name: "消毒酒精", item_type: "consumable", rarity: "uncommon", value: 18, weight: 0.3, effect_type: "heal", effect_value: 18, stackable: true, stack_max: 10 },
-  { name: "急救包", item_type: "consumable", rarity: "uncommon", value: 35, weight: 0.5, effect_type: "heal", effect_value: 35, stackable: false },
+  { name: "急救包", item_type: "consumable", rarity: "uncommon", value: 35, weight: 0.5, effect_type: "heal", effect_value: 35, stackable: false, stack_max: null },
   { name: "战斗兴奋剂", item_type: "consumable", rarity: "rare", value: 50, weight: 0.2, effect_type: "heal", effect_value: 45, stackable: true, stack_max: 5 },
-  { name: "医疗箱", item_type: "consumable", rarity: "rare", value: 80, weight: 1.0, effect_type: "restore", effect_value: 0, stackable: false },
+  { name: "医疗箱", item_type: "consumable", rarity: "rare", value: 80, weight: 1.0, effect_type: "restore", effect_value: 0, stackable: false, stack_max: null },
 
   // 杂项
-  { name: "瓶盖", item_type: "misc", rarity: "common", value: 1, weight: 0.01, stackable: true, stack_max: 999 },
-  { name: "弹药", item_type: "misc", rarity: "common", value: 8, weight: 0.2, stackable: true, stack_max: 100 },
-  { name: "能量电池", item_type: "misc", rarity: "uncommon", value: 25, weight: 0.5, stackable: true, stack_max: 20 },
-  { name: "信号弹", item_type: "misc", rarity: "common", value: 15, weight: 0.3, stackable: true, stack_max: 10 },
+  { name: "瓶盖", item_type: "misc", rarity: "common", value: 1, weight: 0.01, effect_type: null, effect_value: null, stackable: true, stack_max: 999 },
+  { name: "弹药", item_type: "misc", rarity: "common", value: 8, weight: 0.2, effect_type: null, effect_value: null, stackable: true, stack_max: 100 },
+  { name: "能量电池", item_type: "misc", rarity: "uncommon", value: 25, weight: 0.5, effect_type: null, effect_value: null, stackable: true, stack_max: 20 },
+  { name: "信号弹", item_type: "misc", rarity: "common", value: 15, weight: 0.3, effect_type: null, effect_value: null, stackable: true, stack_max: 10 },
 ];
 
 // 初始状态效果
@@ -218,19 +218,19 @@ export const SEED_LOCATIONS = [
 
 // 地点连接
 export const SEED_CONNECTIONS = [
-  { from: "铁锈镇", to: "废弃公路", distance_km: 2, description: "一条从铁锈镇向东延伸的旧公路" },
-  { from: "废弃公路", to: "东部废墟", distance_km: 3, description: "公路在废墟边缘终止" },
-  { from: "东部废墟", to: "辐射洼地", distance_km: 5, description: "穿过废墟后方的污染区" },
-  { from: "铁锈镇", to: "南部集市", distance_km: 4, description: "向南的土路，路面还算平整" },
-  { from: "铁锈镇", to: "废弃工厂", distance_km: 6, description: "向西的旧铁路线" },
-  { from: "废弃工厂", to: "辐射湖", distance_km: 3, description: "工厂后门的排污路" },
-  { from: "铁锈镇", to: "旧水坝", distance_km: 8, description: "向北的旧公路，路况较差" },
-  { from: "旧水坝", to: "地下掩体", distance_km: 2, description: "水坝后山的隐蔽小径" },
-  { from: "旧水坝", to: "废铁城", distance_km: 5, description: "绕过山脚的泥土路" },
-  { from: "东部废墟", to: "死亡爪峡谷", distance_km: 7, description: "穿过断裂的高速公路" },
-  { from: "南部集市", to: "避难所市集", distance_km: 1, description: "集市北面的地下入口" },
-  { from: "废弃公路", to: "荒原车站", distance_km: 2, description: "公路旁的一条岔路" },
-  { from: "废弃工厂", to: "寂静森林", distance_km: 4, description: "工厂西面的林间小道" },
-  { from: "军械库遗址", to: "废铁城", distance_km: 3, description: "军事基地通往废铁城的通道" },
-  { from: "军械库遗址", to: "地下掩体", distance_km: 4, description: "山间小路连接两地" },
+  { from_location: "铁锈镇", to_location: "废弃公路", distance_km: 2, description: "一条从铁锈镇向东延伸的旧公路" },
+  { from_location: "废弃公路", to_location: "东部废墟", distance_km: 3, description: "公路在废墟边缘终止" },
+  { from_location: "东部废墟", to_location: "辐射洼地", distance_km: 5, description: "穿过废墟后方的污染区" },
+  { from_location: "铁锈镇", to_location: "南部集市", distance_km: 4, description: "向南的土路，路面还算平整" },
+  { from_location: "铁锈镇", to_location: "废弃工厂", distance_km: 6, description: "向西的旧铁路线" },
+  { from_location: "废弃工厂", to_location: "辐射湖", distance_km: 3, description: "工厂后门的排污路" },
+  { from_location: "铁锈镇", to_location: "旧水坝", distance_km: 8, description: "向北的旧公路，路况较差" },
+  { from_location: "旧水坝", to_location: "地下掩体", distance_km: 2, description: "水坝后山的隐蔽小径" },
+  { from_location: "旧水坝", to_location: "废铁城", distance_km: 5, description: "绕过山脚的泥土路" },
+  { from_location: "东部废墟", to_location: "死亡爪峡谷", distance_km: 7, description: "穿过断裂的高速公路" },
+  { from_location: "南部集市", to_location: "避难所市集", distance_km: 1, description: "集市北面的地下入口" },
+  { from_location: "废弃公路", to_location: "荒原车站", distance_km: 2, description: "公路旁的一条岔路" },
+  { from_location: "废弃工厂", to_location: "寂静森林", distance_km: 4, description: "工厂西面的林间小道" },
+  { from_location: "军械库遗址", to_location: "废铁城", distance_km: 3, description: "军事基地通往废铁城的通道" },
+  { from_location: "军械库遗址", to_location: "地下掩体", distance_km: 4, description: "山间小路连接两地" },
 ];

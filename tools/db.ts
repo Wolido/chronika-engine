@@ -194,7 +194,7 @@ export function registerDBTools(pi: ExtensionAPI) {
     // 怪物
     const monsterCols = ["name", "category", "hp", "damage_min", "damage_max", "accuracy", "evasion", "armor", "tier", "xp_reward", "strength", "agility", "endurance", "perception", "intelligence", "willpower"];
     for (const m of SEED_MONSTERS) {
-      const vals = monsterCols.map(c => (m as any)[c]);
+      const vals = monsterCols.map(c => (m as any)[c] ?? null);
       db.run(`INSERT OR IGNORE INTO monsters (${monsterCols.join(", ")}) VALUES (${vals.map(() => "?").join(", ")})`, vals);
     }
 
@@ -208,21 +208,21 @@ export function registerDBTools(pi: ExtensionAPI) {
     // 状态效果
     const effectCols = ["name", "effect_type", "target_attribute", "magnitude", "duration", "description"];
     for (const e of SEED_STATUS_EFFECTS) {
-      const vals = effectCols.map(c => (e as any)[c]);
+      const vals = effectCols.map(c => (e as any)[c] ?? null);
       db.run(`INSERT OR IGNORE INTO status_effects (${effectCols.join(", ")}) VALUES (${vals.map(() => "?").join(", ")})`, vals);
     }
 
     // 地点
     const locCols = ["name", "region", "description", "danger_level", "has_shelter"];
     for (const l of SEED_LOCATIONS) {
-      const vals = locCols.map(c => (l as any)[c]);
+      const vals = locCols.map(c => (l as any)[c] ?? null);
       db.run(`INSERT OR IGNORE INTO locations (name, region, description, danger_level, has_shelter, discovered, visited) VALUES (?, ?, ?, ?, ?, 1, 0)`, vals);
     }
 
     // 地点连接
     const connCols = ["from_location", "to_location", "distance_km", "description"];
     for (const c of SEED_CONNECTIONS) {
-      const vals = connCols.map(col => (c as any)[col]);
+      const vals = connCols.map(col => (c as any)[col] ?? null);
       db.run(`INSERT OR IGNORE INTO location_connections (${connCols.join(", ")}) VALUES (${vals.map(() => "?").join(", ")})`, vals);
     }
   }

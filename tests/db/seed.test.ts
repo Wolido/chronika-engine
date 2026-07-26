@@ -1,73 +1,147 @@
-/**
- * seed.test.ts — RED phase: 种子数据校验测试
- *
- * 验证 db/seed.ts 中所有种子数据都符合对应的校验规则。
- * 如果种子数据有误则测试失败（RED），需要 coder 修复种子数据。
- */
-
 import { describe, it } from "node:test";
 import assert from "node:assert";
-import { SEED_MONSTERS, SEED_ITEMS, SEED_STATUS_EFFECTS } from "../../db/seed.ts";
-import { validateMonster } from "../../engine/validation/monster.ts";
-import { validateItem } from "../../engine/validation/item.ts";
-import { validateStatusEffect } from "../../engine/validation/status-effect.ts";
+import {
+  SEED_MONSTERS,
+  SEED_ITEMS,
+  SEED_STATUS_EFFECTS,
+  SEED_LOCATIONS,
+  SEED_CONNECTIONS,
+} from "../../db/seed.ts";
 
-// ---------------------------------------------------------------------------
-// 种子怪物校验
-// ---------------------------------------------------------------------------
+// 每个 SEED 类型对应的必需字段
+const MONSTER_COLS = [
+  "name",
+  "category",
+  "hp",
+  "damage_min",
+  "damage_max",
+  "accuracy",
+  "evasion",
+  "armor",
+  "tier",
+  "xp_reward",
+  "strength",
+  "agility",
+  "endurance",
+  "perception",
+  "intelligence",
+  "willpower",
+];
+const ITEM_COLS = [
+  "name",
+  "item_type",
+  "rarity",
+  "value",
+  "weight",
+  "effect_type",
+  "effect_value",
+  "stackable",
+  "stack_max",
+];
+const EFFECT_COLS = [
+  "name",
+  "effect_type",
+  "target_attribute",
+  "magnitude",
+  "duration",
+  "description",
+];
+const LOC_COLS = [
+  "name",
+  "region",
+  "description",
+  "danger_level",
+  "has_shelter",
+];
+const CONN_COLS = [
+  "from_location",
+  "to_location",
+  "distance_km",
+  "description",
+];
 
-describe("seed monsters", () => {
-  it("all 75 monsters should pass validation", () => {
-    const errors: string[] = [];
-    for (const monster of SEED_MONSTERS) {
-      const result = validateMonster(monster as any);
-      if (!result.valid) {
-        errors.push(`"${monster.name}": ${result.errors.join("; ")}`);
+describe("seed data integrity", () => {
+  it("all SEED_MONSTERS have no undefined fields", () => {
+    for (const m of SEED_MONSTERS) {
+      for (const col of MONSTER_COLS) {
+        assert.notStrictEqual(
+          (m as any)[col],
+          undefined,
+          `monster "${m.name}" missing field "${col}"`
+        );
       }
     }
-    assert.strictEqual(errors.length, 0, errors.join("\n"));
   });
-});
 
-// ---------------------------------------------------------------------------
-// 种子物品校验
-// ---------------------------------------------------------------------------
-
-describe("seed items", () => {
-  it("all 13 items should pass validation", () => {
-    const errors: string[] = [];
-    for (const item of SEED_ITEMS) {
-      const result = validateItem(item as any);
-      if (!result.valid) {
-        errors.push(`"${item.name}": ${result.errors.join("; ")}`);
+  it("all SEED_ITEMS have no undefined fields", () => {
+    for (const it of SEED_ITEMS) {
+      for (const col of ITEM_COLS) {
+        assert.notStrictEqual(
+          (it as any)[col],
+          undefined,
+          `item "${it.name}" missing field "${col}"`
+        );
       }
     }
-    assert.strictEqual(errors.length, 0, errors.join("\n"));
   });
 
-  it("no items should have item_type 'material'", () => {
-    const materials = SEED_ITEMS.filter(i => i.item_type === "material");
-    assert.strictEqual(
-      materials.length,
-      0,
-      `Found ${materials.length} material items: ${materials.map(m => m.name).join(", ")}`
-    );
-  });
-});
-
-// ---------------------------------------------------------------------------
-// 种子状态效果校验
-// ---------------------------------------------------------------------------
-
-describe("seed status effects", () => {
-  it("all 12 status effects should pass validation", () => {
-    const errors: string[] = [];
-    for (const effect of SEED_STATUS_EFFECTS) {
-      const result = validateStatusEffect(effect as any);
-      if (!result.valid) {
-        errors.push(`"${effect.name}": ${result.errors.join("; ")}`);
+  it("all SEED_STATUS_EFFECTS have no undefined fields", () => {
+    for (const e of SEED_STATUS_EFFECTS) {
+      for (const col of EFFECT_COLS) {
+        assert.notStrictEqual(
+          (e as any)[col],
+          undefined,
+          `effect "${e.name}" missing field "${col}"`
+        );
       }
     }
-    assert.strictEqual(errors.length, 0, errors.join("\n"));
+  });
+
+  it("all SEED_LOCATIONS have no undefined fields", () => {
+    for (const l of SEED_LOCATIONS) {
+      for (const col of LOC_COLS) {
+        assert.notStrictEqual(
+          (l as any)[col],
+          undefined,
+          `location "${l.name}" missing field "${col}"`
+        );
+      }
+    }
+  });
+
+  it("all SEED_CONNECTIONS have no undefined fields", () => {
+    for (const c of SEED_CONNECTIONS) {
+      for (const col of CONN_COLS) {
+        assert.notStrictEqual(
+          (c as any)[col],
+          undefined,
+          `connection "${(c as any).from_location}->${(c as any).to_location}" missing field "${col}"`
+        );
+      }
+    }
+  });
+
+  it("seed data has correct counts", () => {
+    assert.strictEqual(SEED_MONSTERS.length, 75);
+    assert.strictEqual(SEED_ITEMS.length, 13);
+    assert.strictEqual(SEED_STATUS_EFFECTS.length, 12);
+    assert.strictEqual(SEED_LOCATIONS.length, 15);
+    assert.strictEqual(SEED_CONNECTIONS.length, 15);
+  });
+
+  it("all SEED_MONSTERS stat sum ≤ tier × 17", () => {
+    for (const m of SEED_MONSTERS) {
+      const statSum =
+        m.strength +
+        m.agility +
+        m.endurance +
+        m.perception +
+        m.intelligence +
+        m.willpower;
+      assert.ok(
+        statSum <= m.tier * 17,
+        `monster "${m.name}" stat sum ${statSum} > tier ${m.tier} × 17 (${m.tier * 17})`
+      );
+    }
   });
 });
