@@ -133,7 +133,7 @@ function getTimeOfDay(hour: number): { label: string; night: boolean } {
 
 export function initGameTime(db: any, startDateStr?: string): void {
   db.set("game_start_real", Date.now());
-  db.set("game_start_date", startDateStr || "2250-01-01T08:00:00");
+  db.set("game_start_date", startDateStr || new Date().toISOString());
 }
 
 export function getGameTime(db: any): number {
@@ -144,21 +144,24 @@ export function getGameTime(db: any): number {
 
 export function getFullTime(db: any): GameTimeInfo {
   const startReal = db.get("game_start_real");
-  const startDateStr = db.get("game_start_date") || "2250-01-01T08:00:00";
+  const startDateStr = db.get("game_start_date") || new Date().toISOString();
 
   if (!startReal) {
+    const now = new Date();
+    const nowPeriod = getTimeOfDay(now.getHours());
     return {
       elapsed_ms: 0, elapsed_hours: 0, elapsed_days: 0,
-      year: 2250, month: 1, day: 1, hour: 8, minute: 0,
-      day_of_week: 2, day_of_week_name: "Tuesday",
-      time_of_day: "早晨", is_night: false, day_number: 1,
+      year: now.getFullYear(), month: now.getMonth() + 1, day: now.getDate(),
+      hour: now.getHours(), minute: now.getMinutes(),
+      day_of_week: now.getDay(), day_of_week_name: WEEKDAY_NAMES[now.getDay()],
+      time_of_day: nowPeriod.label, is_night: nowPeriod.night, day_number: 1,
     };
   }
 
   const elapsed = Date.now() - startReal;
   let startDate = new Date(startDateStr);
   if (isNaN(startDate.getTime())) {
-    startDate = new Date("2250-01-01T08:00:00");
+    startDate = new Date();
   }
   const currentDate = new Date(startDate.getTime() + elapsed);
 

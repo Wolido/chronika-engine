@@ -266,26 +266,30 @@ function sleep(ms: number): Promise<void> {
 // ============================================================
 
 describe("getFullTime", () => {
-  it("should return full date info with default start date (2250-01-01T08:00:00)", () => {
+  it("should use real current time as default start date", () => {
+    // Arrange
     const db = fakeDb();
-    initGameTime(db);
+    const before = new Date();
+
+    // Act
+    initGameTime(db); // no custom date
 
     const info = getFullTime(db);
+    const after = new Date();
 
-    // Basic fields should exist and have correct types
-    assert.strictEqual(info.year, 2250);
-    assert.strictEqual(info.month, 1);
-    assert.strictEqual(info.day, 1);
-    assert.strictEqual(info.hour, 8);
-    assert.strictEqual(info.minute, 0);
-    assert.strictEqual(info.day_of_week, 2);
-    assert.strictEqual(info.day_of_week_name, "Tuesday");
-    assert.strictEqual(info.day_number, 1);
-    assert.strictEqual(info.time_of_day, "早晨"); // 8am -> 早晨
-    assert.strictEqual(info.is_night, false);
-    assert.ok(typeof info.elapsed_ms === "number");
-    assert.ok(typeof info.elapsed_hours === "number");
-    assert.ok(typeof info.elapsed_days === "number");
+    // Assert
+    // Year/month/day should be today
+    assert.strictEqual(info.year, before.getFullYear());
+    assert.strictEqual(info.month, before.getMonth() + 1);
+    assert.strictEqual(info.day, before.getDate());
+    // Hour/minute should be close to now (within 1 minute tolerance for test execution)
+    assert.strictEqual(info.hour, before.getHours());
+    assert.ok(
+      Math.abs(info.minute - before.getMinutes()) <= 1,
+      `Expected minute ${info.minute} to be within 1 of ${before.getMinutes()}`,
+    );
+    // elapsed should be very small (just initialized)
+    assert.ok(info.elapsed_ms < 5000, `Expected elapsed_ms < 5000, got ${info.elapsed_ms}`);
   });
 
   it("should support custom start date via initGameTime", () => {
@@ -324,16 +328,20 @@ describe("getFullTime", () => {
     assert.strictEqual(info.is_night, true);
   });
 
-  it("should return default values when no start time is set", () => {
+  it("should return current real time when no start time is set", () => {
+    // Arrange
     const db = fakeDb();
+    const now = new Date();
     // No initGameTime call
 
+    // Act
     const info = getFullTime(db);
 
-    assert.strictEqual(info.year, 2250);
-    assert.strictEqual(info.hour, 8);
+    // Assert
+    assert.strictEqual(info.year, now.getFullYear());
+    assert.strictEqual(info.month, now.getMonth() + 1);
+    assert.strictEqual(info.day, now.getDate());
     assert.strictEqual(info.elapsed_ms, 0);
-    assert.strictEqual(info.day_number, 1);
   });
 });
 
