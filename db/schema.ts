@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 8;
+export const SCHEMA_VERSION = 9;
 
 export const DDL_STATEMENTS = `
 PRAGMA foreign_keys = ON;
@@ -30,6 +30,10 @@ CREATE TABLE IF NOT EXISTS characters (
   survival      INTEGER DEFAULT 5,
   medicine      INTEGER DEFAULT 5,
   mechanics     INTEGER DEFAULT 5,
+  barter        INTEGER DEFAULT 5,
+  stealth       INTEGER DEFAULT 5,
+  locksmith     INTEGER DEFAULT 5,
+  tracking      INTEGER DEFAULT 5,
   credits       INTEGER DEFAULT 0,
   current_location TEXT,
   created_at    TEXT DEFAULT (datetime('now'))

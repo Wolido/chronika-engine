@@ -25,6 +25,7 @@ import { registerTakeLootTool } from "./tools/take-loot";
 import { registerTimeTools } from "./tools/time";
 import { registerQuestTools } from "./tools/quest";
 import { registerToolHelpTool } from "./tools/tool-help";
+import { registerCreateCharacterTool } from "./tools/create-character";
 
 export default function (pi: ExtensionAPI) {
   registerDiceTool(pi);
@@ -53,6 +54,7 @@ export default function (pi: ExtensionAPI) {
   registerTimeTools(pi);
   registerQuestTools(pi);
   registerToolHelpTool(pi);
+  registerCreateCharacterTool(pi);
 
   pi.on("session_start", async (_event, ctx) => {
     ctx.ui.notify("⚙️ Chronika Engine loaded", "info");

@@ -138,7 +138,7 @@ chronika/
 │       └── status-effect.ts  # 状态效果校验（类型约束+magnitude 规则）
 ├── db/
 │   ├── connection.ts         # sql.js WASM 加载单例
-│   ├── schema.ts             # 21 张表 DDL（SCHEMA_VERSION=8）
+│   ├── schema.ts             # 21 张表 DDL（SCHEMA_VERSION=9）
 │   └── seed.ts               # 种子数据（75 怪物/13 物品/12 状态/15 地点+连接）
 ├── tools/                     # Pi 工具注册（每个对应 engine/ 模块）
 │   ├── dice.ts
@@ -178,7 +178,7 @@ chronika/
 
 ## 4. 数据库 Schema（21 张表）
 
-SCHEMA_VERSION = 8，所有表通过 `PRAGMA foreign_keys = ON` 启用外键约束。
+SCHEMA_VERSION = 9，所有表通过 `PRAGMA foreign_keys = ON` 启用外键约束。
 
 ### 4.1 world_meta
 
