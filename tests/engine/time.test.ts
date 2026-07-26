@@ -251,6 +251,42 @@ describe("initGameTime / getGameTime", () => {
       `Expected elapsed2 (${elapsed2}) > elapsed (${elapsed})`,
     );
   });
+
+  it("getGameTime should auto-initialize and return 0 after auto-init", () => {
+    const db = fakeDb();
+
+    const elapsed = getGameTime(db);
+
+    // Should be 0 right after auto-init
+    assert.ok(elapsed >= 0 && elapsed < 1000);
+  });
+
+  it("after auto-init, subsequent getGameTime calls should show elapsed time", async () => {
+    const db = fakeDb();
+
+    getGameTime(db); // auto-init
+    await sleep(50);
+    const elapsed = getGameTime(db);
+
+    assert.ok(elapsed >= 40, `Expected elapsed >= 40ms, got ${elapsed}`);
+  });
+});
+
+describe("getFullTime auto-initialization", () => {
+  it("should auto-initialize game time when getFullTime is called before initGameTime", () => {
+    const db = fakeDb();
+    // No initGameTime called — simulate resumed session
+
+    const info = getFullTime(db);
+
+    // Should still return valid current time (not default 2250)
+    const now = new Date();
+    assert.strictEqual(info.year, now.getFullYear());
+    assert.strictEqual(info.month, now.getMonth() + 1);
+    assert.strictEqual(info.day, now.getDate());
+    // elapsed should be 0 (just initialized)
+    assert.strictEqual(info.elapsed_ms, 0);
+  });
 });
 
 // ============================================================

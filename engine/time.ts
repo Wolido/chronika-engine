@@ -138,25 +138,20 @@ export function initGameTime(db: any, startDateStr?: string): void {
 
 export function getGameTime(db: any): number {
   const startReal = db.get("game_start_real");
-  if (!startReal) return 0;
+  if (!startReal) {
+    initGameTime(db); // 自动初始化
+    return 0;
+  }
   return Date.now() - startReal;
 }
 
 export function getFullTime(db: any): GameTimeInfo {
-  const startReal = db.get("game_start_real");
-  const startDateStr = db.get("game_start_date") || new Date().toISOString();
-
+  let startReal = db.get("game_start_real");
   if (!startReal) {
-    const now = new Date();
-    const nowPeriod = getTimeOfDay(now.getHours());
-    return {
-      elapsed_ms: 0, elapsed_hours: 0, elapsed_days: 0,
-      year: now.getFullYear(), month: now.getMonth() + 1, day: now.getDate(),
-      hour: now.getHours(), minute: now.getMinutes(),
-      day_of_week: now.getDay(), day_of_week_name: WEEKDAY_NAMES[now.getDay()],
-      time_of_day: nowPeriod.label, is_night: nowPeriod.night, day_number: 1,
-    };
+    initGameTime(db); // 自动初始化
+    startReal = db.get("game_start_real");
   }
+  const startDateStr = db.get("game_start_date") || new Date().toISOString();
 
   const elapsed = Date.now() - startReal;
   let startDate = new Date(startDateStr);
