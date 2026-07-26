@@ -69,7 +69,7 @@ export function registerExplorationTools(pi: ExtensionAPI) {
       if (!result.success) return { content: [{ type: "text", text: `❌ ${result.error}` }], details: result, isError: true };
       const encLine = result.encounter.triggered ? `\n⚡ Encounter en route: ${result.encounter.description}` : "";
       const trackLine = result.tracking_discovery ? `\n🔍 Tracking discovery: ${result.tracking_detail}` : "";
-      const timeLine = result.travel_time_minutes != null ? `\n⏱️ Estimated travel time: ${result.travel_time_minutes} minutes. Use check_arrival to see if you've arrived.` : "";
+      const timeLine = result.travel_time_minutes != null ? `\n⏱️ Estimated travel time: ${result.travel_time_minutes} minutes. Use check_timers to check arrival status.` : "";
       return { content: [{ type: "text", text: `🚶 Traveled ${result.distance_km}km from ${result.from} to ${result.to}.${encLine}${trackLine}${timeLine}` }], details: result };
     },
   });

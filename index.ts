@@ -22,7 +22,7 @@ import { registerEncounterTool } from "./tools/encounter";
 import { registerTraderTool } from "./tools/trader";
 import { registerLootGenTool } from "./tools/loot-gen";
 import { registerTakeLootTool } from "./tools/take-loot";
-import { registerTimeTools } from "./tools/time";
+import { registerTimeTools, registerSetTimerTool, registerCheckTimersTool } from "./tools/time";
 import { registerQuestTools } from "./tools/quest";
 import { registerToolHelpTool } from "./tools/tool-help";
 import { registerCreateCharacterTool } from "./tools/create-character";
@@ -52,6 +52,8 @@ export default function (pi: ExtensionAPI) {
   registerLootGenTool(pi);
   registerTakeLootTool(pi);
   registerTimeTools(pi);
+  registerSetTimerTool(pi);
+  registerCheckTimersTool(pi);
   registerQuestTools(pi);
   registerToolHelpTool(pi);
   registerCreateCharacterTool(pi);

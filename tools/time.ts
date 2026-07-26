@@ -4,8 +4,8 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { getSQL } from "../db/connection";
 import {
-  startQuickTravel,
-  checkTravelArrival,
+  setTimer,
+  checkTimers,
   initGameTime,
   getFullTime,
 } from "../engine/time";
@@ -50,19 +50,18 @@ export function dbAdapter(sqlDb: any) {
   };
 }
 
-export function registerTimeTools(pi: ExtensionAPI) {
+export function registerSetTimerTool(pi: ExtensionAPI) {
   pi.registerTool({
-    name: "quick_travel",
-    label: "Quick Travel",
+    name: "set_timer",
+    label: "Set Timer",
     description:
-      "Start a quick travel between locations. Travel takes real time: distance / speed (default 5 km/h). The player must wait the actual duration. Use check_arrival to see if they've arrived.",
+      "Set a named countdown timer that expires after the given number of real-world minutes. Use check_timers to see remaining time. A timer with the same name is overwritten.",
     parameters: Type.Object({
       db_path: Type.String({ description: "Path to game database" }),
-      from: Type.String({ description: "Departure location" }),
-      to: Type.String({ description: "Destination" }),
-      distance_km: Type.Number({ description: "Distance in kilometers" }),
-      speed_kmh: Type.Optional(
-        Type.Number({ description: "Travel speed in km/h (default 5)" }),
+      name: Type.String({ description: "Unique timer name" }),
+      minutes: Type.Number({ description: "Minutes until the timer is ready" }),
+      description: Type.Optional(
+        Type.String({ description: "Human-readable description" }),
       ),
     }),
     async execute(_toolCallId, params) {
@@ -74,17 +73,7 @@ export function registerTimeTools(pi: ExtensionAPI) {
       const sqlDb = new SQL.Database(buffer);
       const db = dbAdapter(sqlDb);
 
-      const result = startQuickTravel({
-        db,
-        from: params.from,
-        to: params.to,
-        distance_km: params.distance_km,
-        speed_kmh: params.speed_kmh,
-      });
-      if (!result.success) {
-        sqlDb.close();
-        return { content: [{ type: "text", text: `❌ ${result.error}` }], details: result, isError: true };
-      }
+      const entry = setTimer(db, params.name, params.minutes, params.description);
 
       const data = sqlDb.export();
       writeFileSync(resolved, Buffer.from(data));
@@ -94,19 +83,21 @@ export function registerTimeTools(pi: ExtensionAPI) {
         content: [
           {
             type: "text",
-            text: `🚶 Quick travel from ${result.from} to ${result.to}. Distance: ${result.distance_km}km, ETA: ${result.travel_time_minutes} minutes. Say "我到了" when you arrive.`,
+            text: `⏲️ Timer "${entry.name}" set for ${params.minutes} minutes.`,
           },
         ],
-        details: result,
+        details: entry,
       };
     },
   });
+}
 
+export function registerCheckTimersTool(pi: ExtensionAPI) {
   pi.registerTool({
-    name: "check_arrival",
-    label: "Check Arrival",
+    name: "check_timers",
+    label: "Check Timers",
     description:
-      "Check if a quick travel has arrived. If enough real time has passed, the player has arrived at their destination.",
+      "Check all active timers. Returns each timer's remaining minutes and whether it is ready. Ready timers are automatically cleared.",
     parameters: Type.Object({
       db_path: Type.String({ description: "Path to game database" }),
     }),
@@ -119,36 +110,32 @@ export function registerTimeTools(pi: ExtensionAPI) {
       const sqlDb = new SQL.Database(buffer);
       const db = dbAdapter(sqlDb);
 
-      const result = checkTravelArrival(db);
+      const result = checkTimers(db);
 
       const data = sqlDb.export();
       writeFileSync(resolved, Buffer.from(data));
       sqlDb.close();
 
-      if (result.arrived) {
+      if (result.length === 0) {
         return {
-          content: [{ type: "text", text: `✅ Arrived at ${result.to}!` }],
+          content: [{ type: "text", text: "No active timers." }],
           details: result,
         };
       }
-      if (!result.traveling) {
-        return {
-          content: [{ type: "text", text: "Not currently traveling." }],
-          details: result,
-        };
-      }
+      const lines = result.map((t) =>
+        t.ready
+          ? `✅ ${t.name}${t.description ? ` (${t.description})` : ""} — ready!`
+          : `⏳ ${t.name}${t.description ? ` (${t.description})` : ""} — ${t.remaining_minutes} min remaining`,
+      );
       return {
-        content: [
-          {
-            type: "text",
-            text: `⏳ Still traveling to ${result.to}. About ${result.remaining_minutes} minutes remaining.`,
-          },
-        ],
+        content: [{ type: "text", text: lines.join("\n") }],
         details: result,
       };
     },
   });
+}
 
+export function registerTimeTools(pi: ExtensionAPI) {
   pi.registerTool({
     name: "game_time",
     label: "Game Time",

@@ -109,6 +109,49 @@ export function checkTravelArrival(db: any): TravelStatus {
   };
 }
 
+export interface TimerEntry {
+  name: string;
+  description?: string;
+  arrives_at: number;
+}
+
+export interface TimerStatus {
+  name: string;
+  description?: string;
+  remaining_minutes: number;
+  ready: boolean;
+}
+
+export function setTimer(db: any, name: string, minutes: number, description?: string): TimerEntry {
+  const timers: TimerEntry[] = db.get("timers") || [];
+  const existing = timers.findIndex(t => t.name === name);
+  const entry: TimerEntry = { name, description, arrives_at: Date.now() + minutes * 60 * 1000 };
+  if (existing >= 0) {
+    timers[existing] = entry;
+  } else {
+    timers.push(entry);
+  }
+  db.set("timers", timers);
+  return entry;
+}
+
+export function checkTimers(db: any): TimerStatus[] {
+  const timers: TimerEntry[] = db.get("timers") || [];
+  const now = Date.now();
+  const result = timers.map(t => ({
+    name: t.name,
+    description: t.description,
+    remaining_minutes: Math.max(0, Math.ceil((t.arrives_at - now) / 60000)),
+    ready: now >= t.arrives_at,
+  }));
+  // Auto-clean ready timers
+  const remaining = timers.filter(t => now < t.arrives_at);
+  if (remaining.length !== timers.length) {
+    db.set("timers", remaining);
+  }
+  return result;
+}
+
 const WEEKDAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const TIME_OF_DAY = [
   { start: 5, label: "凌晨", night: false },

@@ -208,18 +208,6 @@ const TOOLS: Record<string, ToolHelp> = {
     ],
   },
 
-  quick_travel: {
-    name: "quick_travel",
-    description: "快速移动（消耗真实时间等待）",
-    parameters: [
-      { name: "db_path", type: "string", required: true, description: "数据库路径" },
-      { name: "from", type: "string", required: true, description: "出发地" },
-      { name: "to", type: "string", required: true, description: "目的地" },
-      { name: "distance_km", type: "number", required: true, description: "距离（公里）" },
-      { name: "speed_kmh", type: "number", required: false, description: "移动速度 km/h" },
-    ],
-  },
-
   generate_stock: {
     name: "generate_stock",
     description: "按NPC类型生成交易库存 (villager/scavenger/trader/merchant)",
@@ -291,9 +279,20 @@ const TOOLS: Record<string, ToolHelp> = {
     ],
   },
 
-  check_arrival: {
-    name: "check_arrival",
-    description: "检查快速移动是否已到达目的地",
+  set_timer: {
+    name: "set_timer",
+    description: "设置一个等待计时器。游戏时间与现实时间同步，等待需要真实时间流逝。用于休息、等待商人、旅行等需要时间的行为。",
+    parameters: [
+      { name: "db_path", type: "string", required: true, description: "数据库路径" },
+      { name: "name", type: "string", required: true, description: "计时器名称，同名会覆盖" },
+      { name: "minutes", type: "number", required: true, description: "等待分钟数" },
+      { name: "description", type: "string", required: false, description: "可选描述" },
+    ],
+  },
+
+  check_timers: {
+    name: "check_timers",
+    description: "检查所有等待计时器的状态。返回每个计时器的剩余时间和是否就绪。已就绪的计时器会自动清理。",
     parameters: [
       { name: "db_path", type: "string", required: true, description: "数据库路径" },
     ],

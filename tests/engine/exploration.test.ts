@@ -537,7 +537,7 @@ describe("travel", () => {
     db.close();
   });
 
-  it("travel should return travel time when using quick_travel", async () => {
+  it("travel should set a timer with correct travel time", async () => {
     // Arrange
     // Travel 3km at default 5km/h → 36 minutes
     const db = await createTravelDB();
@@ -575,6 +575,13 @@ describe("travel", () => {
         travelResult.arrives_at <= afterCall + expectedTravelMs + 100,
       `Expected arrives_at within [${beforeCall + expectedTravelMs - 100}, ${afterCall + expectedTravelMs + 100}], got ${travelResult.arrives_at}`
     );
+
+    // Verify timer was set
+    const timers = db.get("timers");
+    assert.ok(timers && timers.length > 0, "travel should set a timer");
+    assert.ok(timers[0].name.includes("travel"));
+    assert.ok(timers[0].name.includes("时间起点"));
+    assert.ok(timers[0].name.includes("时间终点"));
 
     db.close();
   });
