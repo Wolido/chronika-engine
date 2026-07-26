@@ -27,7 +27,7 @@ pi
 ```bash
 alias pg='pi \
   --no-extensions -e npm:chronika-engine \
-  --tools read,ls,grep,find,bash,subagent \
+  --tools read,ls,grep,find,bash \
   --no-skills --no-context-files'
 ```
 
