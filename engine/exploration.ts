@@ -6,6 +6,12 @@
 import type { AccessoryData } from "./legendary-gen.ts";
 import { setTimer } from "./time.ts";
 
+/** 默认步行速度 (km/h) */
+export const WALK_SPEED_KMH = 5;
+
+/** 最大合理距离 (km)，超过会警告 */
+export const MAX_REASONABLE_DISTANCE_KM = 20;
+
 function rollD100(): number {
   return Math.floor(Math.random() * 100) + 1;
 }
@@ -58,6 +64,11 @@ export interface DiscoverResult {
 }
 
 export function discoverLocation(db: any, input: DiscoverInput): DiscoverResult {
+  // 距离合理性检查
+  if ((input.distance_km ?? 1.0) > MAX_REASONABLE_DISTANCE_KM) {
+    return { success: false, location_name: input.name, connection: { from: "", to: "" }, total_locations: 0, error: `距离过长（>${MAX_REASONABLE_DISTANCE_KM}km），请控制在合理范围内。` };
+  }
+
   // Check if location already exists
   const existing = queryExec(db, "SELECT name FROM locations WHERE name = ?", [input.name]);
   if (existing.length > 0 && existing[0].values.length > 0) {
@@ -240,7 +251,7 @@ export function travel(db: any, input: TravelInput): TravelResult {
 
   // Quick travel：走现实时间，通过统一 timer 系统记录到达时间
   if (input.use_quick_travel !== false && typeof db.set === "function") {
-    const travelTimeMinutes = Math.round((distance / 5) * 60); // default 5km/h
+    const travelTimeMinutes = Math.round((distance / WALK_SPEED_KMH) * 60);
     const entry = setTimer(
       db,
       `travel:${input.current_location}→${input.target_location}`,

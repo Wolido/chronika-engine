@@ -36,7 +36,7 @@ export function registerExplorationTools(pi: ExtensionAPI) {
       description: Type.String({ description: "Location description" }),
       region: Type.Optional(Type.String({ description: "Region name" })),
       danger_level: Type.Optional(Type.Number({ description: "Danger level 1-5" })),
-      distance_km: Type.Optional(Type.Number({ description: "Distance in km" })),
+      distance_km: Type.Optional(Type.Number({ description: "Distance in km (default 1.0, max 20). Walking speed is 5 km/h." })),
       connection_description: Type.Optional(Type.String({ description: "Description of the path/route" })),
       has_shelter: Type.Optional(Type.Boolean({ description: "Can rest here safely" })),
     }),
@@ -69,8 +69,16 @@ export function registerExplorationTools(pi: ExtensionAPI) {
       if (!result.success) return { content: [{ type: "text", text: `❌ ${result.error}` }], details: result, isError: true };
       const encLine = result.encounter.triggered ? `\n⚡ Encounter en route: ${result.encounter.description}` : "";
       const trackLine = result.tracking_discovery ? `\n🔍 Tracking discovery: ${result.tracking_detail}` : "";
-      const timeLine = result.travel_time_minutes != null ? `\n⏱️ Estimated travel time: ${result.travel_time_minutes} minutes. Use check_timers to check arrival status.` : "";
-      return { content: [{ type: "text", text: `🚶 Traveled ${result.distance_km}km from ${result.from} to ${result.to}.${encLine}${trackLine}${timeLine}` }], details: result };
+      const mainLine = result.travel_time_minutes != null
+        ? `🚶 **出发！** 正在从 ${result.from} 前往 ${result.to}（${result.distance_km}km，步行约 ${result.travel_time_minutes} 分钟）`
+        : `🚶 Traveled ${result.distance_km}km from ${result.from} to ${result.to}.`;
+      const arrivalTimeStr = result.arrives_at != null
+        ? new Date(result.arrives_at).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })
+        : "";
+      const timeLine = result.travel_time_minutes != null
+        ? `\n⏱️ 预计到达时间：${arrivalTimeStr}（约 ${result.travel_time_minutes} 分钟后）\n⚠️ 到达前请勿更新 current_location 或叙述到达场景。用 check_timers 查看是否已到达。`
+        : "";
+      return { content: [{ type: "text", text: `${mainLine}${encLine}${trackLine}${timeLine}` }], details: result };
     },
   });
 
