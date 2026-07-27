@@ -110,7 +110,7 @@ export interface TravelInput {
   stealth?: number;
   tracking?: number;
   accessories?: AccessoryData[];
-  use_quick_travel?: boolean; // default true — 走现实时间，用 check_timers 查询到达
+  use_quick_travel?: boolean; // default true — 走现实时间，到达状态由计时器每回合自动注入
 }
 
 export interface TravelEncounter {

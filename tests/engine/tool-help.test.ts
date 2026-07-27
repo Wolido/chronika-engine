@@ -156,4 +156,32 @@ describe("getToolHelp", () => {
     }
   });
 
+  it("should state that set_timer status is automatically injected each turn", () => {
+    const result = getToolHelp("set_timer");
+
+    assert.strictEqual(result.found, true);
+    assert.ok(
+      result.tool.description.includes("每回合自动注入"),
+      `set_timer description should mention automatic per-turn injection, got: ${result.tool.description}`,
+    );
+    assert.ok(
+      result.tool.description.includes("无需手动查询"),
+      `set_timer description should state no manual query is needed, got: ${result.tool.description}`,
+    );
+  });
+
+  it("should state that check_timers status is automatically injected each turn", () => {
+    const result = getToolHelp("check_timers");
+
+    assert.strictEqual(result.found, true);
+    assert.ok(
+      result.tool.description.includes("每回合自动注入"),
+      `check_timers description should mention automatic per-turn injection, got: ${result.tool.description}`,
+    );
+    assert.ok(
+      result.tool.description.includes("无需手动查询"),
+      `check_timers description should state no manual query is needed, got: ${result.tool.description}`,
+    );
+  });
+
 });

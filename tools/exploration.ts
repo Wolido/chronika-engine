@@ -62,7 +62,7 @@ export function registerExplorationTools(pi: ExtensionAPI) {
     }),
     async execute(_toolCallId, params) {
       const sqlDb = await openDB(params.db_path);
-      // 挂上 game_state key-value store，让 quick travel 能持久化行程状态（供 check_arrival 查询）
+      // 挂上 game_state key-value store，让 travel 能通过统一 timer 系统持久化行程计时器
       const db = Object.assign(sqlDb, dbAdapter(sqlDb));
       const result = travel(db, { current_location: params.current_location, target_location: params.target_location, stealth: params.stealth, tracking: params.tracking });
       saveDB(sqlDb, params.db_path);
@@ -76,7 +76,7 @@ export function registerExplorationTools(pi: ExtensionAPI) {
         ? new Date(result.arrives_at).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })
         : "";
       const timeLine = result.travel_time_minutes != null
-        ? `\n⏱️ 预计到达时间：${arrivalTimeStr}（约 ${result.travel_time_minutes} 分钟后）\n⚠️ 到达前请勿更新 current_location 或叙述到达场景。用 check_timers 查看是否已到达。`
+        ? `\n⏱️ 预计到达时间：${arrivalTimeStr}（约 ${result.travel_time_minutes} 分钟后）\n⚠️ 到达前请勿更新 current_location 或叙述到达场景。计时器状态每回合自动注入更新，无需手动查询。`
         : "";
       return { content: [{ type: "text", text: `${mainLine}${encLine}${trackLine}${timeLine}` }], details: result };
     },

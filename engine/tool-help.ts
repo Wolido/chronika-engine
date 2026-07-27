@@ -281,7 +281,7 @@ const TOOLS: Record<string, ToolHelp> = {
 
   set_timer: {
     name: "set_timer",
-    description: "设置一个等待计时器。游戏时间与现实时间同步，等待需要真实时间流逝。用于休息、等待商人、旅行等需要时间的行为。",
+    description: "设置一个等待计时器。游戏时间与现实时间同步，等待需要真实时间流逝。用于休息、等待商人、旅行等需要时间的行为。计时器状态每回合自动注入上下文，无需手动查询。",
     parameters: [
       { name: "db_path", type: "string", required: true, description: "数据库路径" },
       { name: "name", type: "string", required: true, description: "计时器名称，同名会覆盖" },
@@ -292,7 +292,7 @@ const TOOLS: Record<string, ToolHelp> = {
 
   check_timers: {
     name: "check_timers",
-    description: "检查所有等待计时器的状态。返回每个计时器的剩余时间和是否就绪。已就绪的计时器会自动清理。",
+    description: "检查所有等待计时器的状态。返回每个计时器的剩余时间和是否就绪。已就绪的计时器会自动清理。计时器状态每回合自动注入上下文，无需手动查询。",
     parameters: [
       { name: "db_path", type: "string", required: true, description: "数据库路径" },
     ],

@@ -55,7 +55,7 @@ export function registerSetTimerTool(pi: ExtensionAPI) {
     name: "set_timer",
     label: "Set Timer",
     description:
-      "Set a named countdown timer that expires after the given number of real-world minutes. Use check_timers to see remaining time. A timer with the same name is overwritten.",
+      "Set a named countdown timer that expires after the given number of real-world minutes. Timer status is injected automatically each turn — no need to poll it manually. A timer with the same name is overwritten.",
     parameters: Type.Object({
       db_path: Type.String({ description: "Path to game database" }),
       name: Type.String({ description: "Unique timer name" }),
@@ -71,13 +71,17 @@ export function registerSetTimerTool(pi: ExtensionAPI) {
         : resolve(process.cwd(), params.db_path);
       const buffer = readFileSync(resolved);
       const sqlDb = new SQL.Database(buffer);
-      const db = dbAdapter(sqlDb);
+      let entry;
+      try {
+        const db = dbAdapter(sqlDb);
 
-      const entry = setTimer(db, params.name, params.minutes, params.description);
+        entry = setTimer(db, params.name, params.minutes, params.description);
 
-      const data = sqlDb.export();
-      writeFileSync(resolved, Buffer.from(data));
-      sqlDb.close();
+        const data = sqlDb.export();
+        writeFileSync(resolved, Buffer.from(data));
+      } finally {
+        sqlDb.close();
+      }
 
       return {
         content: [
@@ -108,13 +112,17 @@ export function registerCheckTimersTool(pi: ExtensionAPI) {
         : resolve(process.cwd(), params.db_path);
       const buffer = readFileSync(resolved);
       const sqlDb = new SQL.Database(buffer);
-      const db = dbAdapter(sqlDb);
+      let result;
+      try {
+        const db = dbAdapter(sqlDb);
 
-      const result = checkTimers(db);
+        result = checkTimers(db);
 
-      const data = sqlDb.export();
-      writeFileSync(resolved, Buffer.from(data));
-      sqlDb.close();
+        const data = sqlDb.export();
+        writeFileSync(resolved, Buffer.from(data));
+      } finally {
+        sqlDb.close();
+      }
 
       if (result.length === 0) {
         return {
@@ -151,10 +159,18 @@ export function registerTimeTools(pi: ExtensionAPI) {
         : resolve(process.cwd(), params.db_path);
       const buffer = readFileSync(resolved);
       const sqlDb = new SQL.Database(buffer);
-      const db = dbAdapter(sqlDb);
+      let info;
+      try {
+        const db = dbAdapter(sqlDb);
 
-      const info = getFullTime(db);
-      sqlDb.close();
+        info = getFullTime(db);
+
+        // getFullTime 首次调用会自动初始化时钟 —— 写回文件确保持久化
+        const data = sqlDb.export();
+        writeFileSync(resolved, Buffer.from(data));
+      } finally {
+        sqlDb.close();
+      }
 
       return {
         content: [
