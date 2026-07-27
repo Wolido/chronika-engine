@@ -1,5 +1,34 @@
 # Changelog
 
+## [0.6.0] - 2026-07-27
+
+### Added
+
+- 统一计时器系统：set_timer / check_timers 工具，替代 quick_travel / check_arrival
+- travel 自动使用 set_timer，返回预计到达时间和倒计时
+- 游戏时间自动初始化：续玩旧存档时首次调 game_time 自动设时间基准
+- WALK_SPEED_KMH=5 常量，距离/时间关系统一管理
+- discover_location 拒绝超过 20km 的连接
+
+### Changed
+
+- travel 输出从 "Traveled" 改为 "出发！正在从 X 前往 Y"，明确未到达
+- 命中公式加 0.5 基准：(0.5 + accuracy - evasion) × 100，普通武器 ~70-80% 命中
+- 属性修正钳制为非负（低属性不扣命中）
+
+### Fixed
+
+- init_db 种子数据插入失败：SEED_CONNECTIONS 字段名修复，全列映射加 ?? null
+- SEED_ITEMS 缺失字段补全
+- characters 表补齐 barter/stealth/locksmith/tracking 四列
+- world_gen 工具描述补全所有必需字段和约束
+- 游戏时间改为与现实时间 1:1 对应
+
+### Docs
+
+- GM 指南：时间规则改为系统硬约束，禁止叙述跳过时间
+- GM 指南：禁止 check_timers 轮询
+
 ## [0.5.0] - 2026-07-26
 
 ### Added
