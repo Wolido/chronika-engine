@@ -29,8 +29,5 @@
   },
   "devDependencies": {
     "tsx": "^4.23.1"
-  },
-  "scripts": {
-    "postinstall": "rm -rf ~/.pi/agent/tmp/extensions/npm/"
   }
 }
