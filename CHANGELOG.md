@@ -14,11 +14,19 @@
 - create_character 自动赠送初始武器（生锈匕首，damage 2-5, accuracy 0.72），写入背包并装备
 - create_character 新增 skip_initial_weapon 参数，可跳过初始武器
 - GM 指南补充 travel 途中遭遇处理指引：路上遇敌打怪没问题，到达目的地才需等计时器
+- generate_loot 新增防具掉落（60%概率）和饰品掉落（50%概率），调用 generateArmor/generateAccessory 生成
+- generate_loot 武器掉率提升至 70%（原为 25%-65% 随 tier）
+- 稀有度表统一为 common 15% / uncommon 25% / rare 35% / legendary 25%（原按 tier 区分，低 tier 传奇仅 2%）
 
 ### Fixed
 
 - create_character 第二个角色创建失败：weapons.name UNIQUE 约束冲突（生锈匕首重复插入），改为先查后插
 - move_to 输出未展示回退模式提示 note
+
+### Changed
+
+- generate_loot 的 LootItemEntry.type 新增 "armor" 和 "accessory" 类型
+- rollRarity 不再按 tier 区分稀有度，使用统一概率表
 
 ## [Unreleased]
 

@@ -4,6 +4,8 @@
  * See tests/engine/loot-gen-accessory.test.ts for mock expectations.
  */
 import { generateWeapon } from "./weapon-gen.ts";
+import { generateArmor } from "./armor-gen.ts";
+import { generateAccessory } from "./accessory-gen.ts";
 import type { AccessoryData } from "./legendary-gen.ts";
 
 export interface GenerateLootInput {
@@ -11,8 +13,10 @@ export interface GenerateLootInput {
   accessories?: AccessoryData[];
 }
 
+export type LootItemType = "currency" | "item" | "weapon" | "armor" | "accessory";
+
 export interface LootItemEntry {
-  type: "currency" | "item" | "weapon";
+  type: LootItemType;
   name: string;
   quantity: number;
   rarity?: string;
@@ -33,38 +37,12 @@ export interface GenerateLootResult {
   accessory_double_loot_triggered?: boolean;
 }
 
-const RARITY_TABLE: Record<number, { rarity: string; chance: number }[]> = {
-  1: [
-    { rarity: "common", chance: 0.60 },
-    { rarity: "uncommon", chance: 0.30 },
-    { rarity: "rare", chance: 0.08 },
-    { rarity: "legendary", chance: 0.02 },
-  ],
-  2: [
-    { rarity: "common", chance: 0.60 },
-    { rarity: "uncommon", chance: 0.30 },
-    { rarity: "rare", chance: 0.08 },
-    { rarity: "legendary", chance: 0.02 },
-  ],
-  3: [
-    { rarity: "common", chance: 0.20 },
-    { rarity: "uncommon", chance: 0.40 },
-    { rarity: "rare", chance: 0.30 },
-    { rarity: "legendary", chance: 0.10 },
-  ],
-  4: [
-    { rarity: "common", chance: 0.05 },
-    { rarity: "uncommon", chance: 0.20 },
-    { rarity: "rare", chance: 0.40 },
-    { rarity: "legendary", chance: 0.35 },
-  ],
-  5: [
-    { rarity: "common", chance: 0.05 },
-    { rarity: "uncommon", chance: 0.20 },
-    { rarity: "rare", chance: 0.40 },
-    { rarity: "legendary", chance: 0.35 },
-  ],
-};
+const RARITY_TABLE = [
+  { rarity: "common", chance: 0.15 },
+  { rarity: "uncommon", chance: 0.25 },
+  { rarity: "rare", chance: 0.35 },
+  { rarity: "legendary", chance: 0.25 },
+];
 
 const DEFAULT_ITEMS = ["治疗粉", "净水", "罐头"];
 
@@ -72,17 +50,16 @@ function rollBetween(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-function rollRarity(tier: number): { rarity: string; success: boolean } {
-  const table = RARITY_TABLE[tier] || RARITY_TABLE[1];
+function rollRarity(): { rarity: string } {
   const roll = Math.random();
   let cumulative = 0;
-  for (const entry of table) {
+  for (const entry of RARITY_TABLE) {
     cumulative += entry.chance;
     if (roll < cumulative) {
-      return { rarity: entry.rarity, success: true };
+      return { rarity: entry.rarity };
     }
   }
-  return { rarity: "common", success: true }; // Fallback for floating-point edge case
+  return { rarity: "common" }; // Fallback for floating-point edge case
 }
 
 function pickRandom<T>(arr: T[]): T {
@@ -145,24 +122,64 @@ export function generateLoot(input: GenerateLootInput): GenerateLootResult {
     }
   }
 
-  // 5. Weapon (概率随 tier 增加，带稀有度表)
-  const weaponChance = 0.15 + tier * 0.1;
-  if (Math.random() < weaponChance) {
-    const rarityResult = rollRarity(tier);
+  // 5. Weapon (70% chance)
+  const WEAPON_CHANCE = 0.7;
+  if (Math.random() < WEAPON_CHANCE) {
+    const { rarity } = rollRarity();
     const weapon = generateWeapon({
-      min_rarity: rarityResult.rarity,
-      max_rarity: rarityResult.rarity,
+      min_rarity: rarity,
+      max_rarity: rarity,
       tier: tier,
     });
     items.push({
       type: "weapon",
-      name: weapon.weapon.name || `${rarityResult.rarity} weapon (tier ${tier})`,
+      name: weapon.weapon.name || `${rarity} weapon (tier ${tier})`,
       quantity: 1,
-      rarity: rarityResult.rarity,
+      rarity,
     });
-    rolls.push({ category: "weapon", success: true, detail: `${rarityResult.rarity}: ${weapon.weapon.name || "unnamed"}` });
+    rolls.push({ category: "weapon", success: true, detail: `${rarity}: ${weapon.weapon.name || "unnamed"}` });
   } else {
     rolls.push({ category: "weapon", success: false });
+  }
+
+  // 6. Armor (60% chance)
+  const ARMOR_CHANCE = 0.6;
+  if (Math.random() < ARMOR_CHANCE) {
+    const { rarity } = rollRarity();
+    const armor = generateArmor({
+      min_rarity: rarity,
+      max_rarity: rarity,
+      tier: tier,
+    });
+    items.push({
+      type: "armor",
+      name: armor.armor.name || `${rarity} armor (tier ${tier})`,
+      quantity: 1,
+      rarity,
+    });
+    rolls.push({ category: "armor", success: true, detail: `${rarity}: ${armor.armor.name || "unnamed"}` });
+  } else {
+    rolls.push({ category: "armor", success: false });
+  }
+
+  // 7. Accessory (50% chance)
+  const ACCESSORY_CHANCE = 0.5;
+  if (Math.random() < ACCESSORY_CHANCE) {
+    const { rarity } = rollRarity();
+    const accessory = generateAccessory({
+      min_rarity: rarity,
+      max_rarity: rarity,
+      tier: tier,
+    });
+    items.push({
+      type: "accessory",
+      name: accessory.accessory.name || `${rarity} accessory (tier ${tier})`,
+      quantity: 1,
+      rarity,
+    });
+    rolls.push({ category: "accessory", success: true, detail: `${rarity}: ${accessory.accessory.name || "unnamed"}` });
+  } else {
+    rolls.push({ category: "accessory", success: false });
   }
 
   return {
