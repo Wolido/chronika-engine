@@ -6,6 +6,20 @@
 
 - session_start 时自动检测 pi 扩展缓存版本：如果缓存版本与 npm 安装版本不一致，自动清除缓存并提示重启，无需手动清理
 
+## [0.9.0] - 2026-07-28
+
+### Added
+
+- move_to 工具新增 current_poi 参数，支持按 POI 连接导航；无直达连接时自动回退到列表模式
+- create_character 自动赠送初始武器（生锈匕首，damage 2-5, accuracy 0.72），写入背包并装备
+- create_character 新增 skip_initial_weapon 参数，可跳过初始武器
+- GM 指南补充 travel 途中遭遇处理指引：路上遇敌打怪没问题，到达目的地才需等计时器
+
+### Fixed
+
+- create_character 第二个角色创建失败：weapons.name UNIQUE 约束冲突（生锈匕首重复插入），改为先查后插
+- move_to 输出未展示回退模式提示 note
+
 ## [Unreleased]
 
 ## [0.8.1] - 2026-07-28

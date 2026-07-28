@@ -134,15 +134,17 @@ export function registerExplorationTools(pi: ExtensionAPI) {
       db_path: Type.String({ description: "Path to game database" }),
       location_name: Type.String({ description: "Current location" }),
       target_poi: Type.String({ description: "Target POI" }),
+      current_poi: Type.Optional(Type.String({ description: "Current POI name (for connection-based navigation)" })),
     }),
     async execute(_toolCallId, params) {
       const db = await openDB(params.db_path);
-      const result = moveTo(db, { location_name: params.location_name, target_poi: params.target_poi });
+      const result = moveTo(db, { location_name: params.location_name, target_poi: params.target_poi, current_poi: params.current_poi });
       db.close();
       if (!result.success) return { content: [{ type: "text", text: `❌ ${result.error}` }], details: result, isError: true };
       const crossLine = result.cross_location ? `\n🚪 This leads to: ${result.cross_location} (use travel to go there)` : "";
       const availLine = result.pois_available.length > 0 ? `\nFrom here you can go to: ${result.pois_available.join(", ")}` : "";
-      return { content: [{ type: "text", text: `🚶 Moved to "${result.poi}" in ${result.location}.${availLine}${crossLine}` }], details: result };
+      const noteLine = result.note ? `\nℹ️ ${result.note}` : "";
+      return { content: [{ type: "text", text: `🚶 Moved to "${result.poi}" in ${result.location}.${availLine}${crossLine}${noteLine}` }], details: result };
     },
   });
 

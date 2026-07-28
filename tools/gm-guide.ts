@@ -52,6 +52,13 @@ function getGMGuide(topic?: string): string {
 - 战斗调用 \`combat_resolve\`，结果中的 HP 变化由你跟踪并写入 DB。
 - 战斗后调用 \`loot\` 生成掉落，调用 \`log_event\` 记录事件。
 
+## 旅行中遭遇
+
+- travel 返回"路上有遭遇"后，GM 可以自由处理中途的遭遇：调 get_encounter 获取怪物、调 combat_resolve 战斗、调 generate_loot 拾取，都不会影响旅行计时器。
+- 旅行计时器只卡"到达目的地"这一件事。到达前不要更新 current_location、不要叙述到达场景。
+- 玩家打了一架、捡了点东西，继续赶路——时间到了自然到达。
+
+
 ## 武器与装备
 
 - 敌人掉落武器时调用 \`generate_weapon\` 生成随机武器。

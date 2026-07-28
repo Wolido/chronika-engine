@@ -3,7 +3,7 @@ import { Type } from "typebox";
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { getSQL } from "../db/connection";
-import { buildCharacterSQL } from "../engine/create-character";
+import { createCharacter } from "../engine/create-character";
 
 function resolvePath(inputPath: string): string {
   if (inputPath.startsWith("/")) return inputPath;
@@ -43,6 +43,7 @@ export function registerCreateCharacterTool(pi: ExtensionAPI) {
       })),
       credits: Type.Optional(Type.Number({ description: "Starting credits (default 0)" })),
       current_location: Type.Optional(Type.String({ description: "Starting location name" })),
+      skip_initial_weapon: Type.Optional(Type.Boolean({ description: "Skip granting the initial weapon (default false)" })),
     }),
     async execute(_toolCallId, params) {
       try {
@@ -60,20 +61,16 @@ export function registerCreateCharacterTool(pi: ExtensionAPI) {
         const buffer = readFileSync(resolved);
         const db = new SQL.Database(buffer);
 
-        const { sql, values } = buildCharacterSQL({
+        const result = createCharacter(db, {
           name: params.name,
           hp_max: params.hp_max,
           stats: params.stats as any,
           skills: params.skills as any,
           credits: params.credits,
           current_location: params.current_location,
+          skip_initial_weapon: params.skip_initial_weapon,
         });
-
-        db.run(sql, values);
-
-        // Get last insert ID
-        const result = db.exec("SELECT last_insert_rowid() as id");
-        const charId = result[0]?.values[0]?.[0] as number;
+        const charId = result.character_id;
 
         const data = db.export();
         writeFileSync(resolved, Buffer.from(data));
@@ -86,10 +83,11 @@ export function registerCreateCharacterTool(pi: ExtensionAPI) {
         parts.push(`  • HP: ${params.hp_max ?? 30}`);
         if (params.credits) parts.push(`  • Credits: ${params.credits}`);
         if (params.current_location) parts.push(`  • Location: ${params.current_location}`);
+        if (result.weapon_name) parts.push(`  • Weapon: ${result.weapon_name} (equipped)`);
 
         return {
           content: [{ type: "text", text: parts.join("\n") }],
-          details: { character_id: charId, name: params.name },
+          details: { character_id: charId, name: params.name, weapon_id: result.weapon_id, weapon_name: result.weapon_name },
         };
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);

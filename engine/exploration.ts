@@ -433,6 +433,7 @@ export interface DiscoverPOIResult {
 export interface MoveToInput {
   location_name: string;
   target_poi: string;
+  current_poi?: string;
 }
 
 export interface MoveToResult {
@@ -441,6 +442,7 @@ export interface MoveToResult {
   poi: string;
   pois_available: string[];
   cross_location?: string;
+  note?: string;
   error?: string;
 }
 
@@ -486,6 +488,42 @@ export function moveTo(db: any, input: MoveToInput): MoveToResult {
     const allPoisResult = queryExec(db, "SELECT name FROM location_pois WHERE location_name = ? AND discovered = 1", [input.location_name]);
     const allPois = allPoisResult.length > 0 ? allPoisResult[0].values.map(v => v[0] as string) : [];
     return { success: true, location: input.location_name, poi: input.target_poi, pois_available: allPois };
+  }
+
+  // 如果 target === current_poi，直接成功
+  if (input.current_poi && input.target_poi === input.current_poi) {
+    const allPoisResult = queryExec(db, "SELECT name FROM location_pois WHERE location_name = ? AND discovered = 1", [input.location_name]);
+    const allPois = allPoisResult.length > 0 ? allPoisResult[0].values.map(v => v[0] as string) : [];
+    return { success: true, location: input.location_name, poi: input.target_poi, pois_available: allPois };
+  }
+
+  // 如果传了 current_poi，优先检查从 current_poi 到 target 的连接
+  if (input.current_poi) {
+    const fromResult = queryExec(db,
+      "SELECT pc.to_poi, pc.to_location FROM poi_connections pc WHERE pc.location_name = ? AND pc.from_poi = ? AND pc.to_poi = ?",
+      [input.location_name, input.current_poi, input.target_poi]
+    );
+    if (fromResult.length > 0 && fromResult[0].values.length > 0) {
+      // 直达连接存在
+      const toLocation = fromResult[0].values[0][1] as string | null;
+      // 查询从 target 出发可去的 POI
+      const availResult = queryExec(db,
+        "SELECT pc.to_poi FROM poi_connections pc WHERE pc.location_name = ? AND pc.from_poi = ? AND pc.to_poi IS NOT NULL",
+        [input.location_name, input.target_poi]
+      );
+      const available: string[] = [];
+      for (const r of availResult) {
+        for (const v of r.values) {
+          if (v[0]) available.push(v[0] as string);
+        }
+      }
+      return { success: true, location: input.location_name, poi: input.target_poi, pois_available: available, cross_location: toLocation || undefined };
+    }
+
+    // 有 current_poi 但无法直达 → 回退到列表模式
+    const allPoisResult = queryExec(db, "SELECT name FROM location_pois WHERE location_name = ? AND discovered = 1", [input.location_name]);
+    const allPois = allPoisResult.length > 0 ? allPoisResult[0].values.map(v => v[0] as string) : [];
+    return { success: true, location: input.location_name, poi: input.target_poi, pois_available: allPois, note: "no direct connection" };
   }
 
   // Check for a direct connection leading to the target POI
