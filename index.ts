@@ -63,7 +63,13 @@ export default function (pi: ExtensionAPI) {
   registerTimeContextHook(pi);
 
   pi.on("session_start", async (_event, ctx) => {
-    ctx.ui.notify("⚙️ Chronika Engine loaded", "info");
+    // 读取当前版本号
+    let version = "?";
+    try {
+      const pkg = JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), "package.json"), "utf8"));
+      version = pkg.version;
+    } catch {}
+    ctx.ui.notify(`⚙️ Chronika Engine v${version} loaded`, "info");
 
     // ── 缓存版本自检 ──
     // 检测当前是否运行在 pi 的 tmp 扩展缓存目录中

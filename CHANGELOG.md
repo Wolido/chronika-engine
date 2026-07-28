@@ -6,6 +6,11 @@
 
 - session_start 时自动检测 pi 扩展缓存版本：如果缓存版本与 npm 安装版本不一致，自动清除缓存并提示重启，无需手动清理
 
+## [0.9.1] - 2026-07-28
+
+### Added
+
+- 启动时显示当前加载的 Chronika Engine 版本号（⚙️ Chronika Engine vX.X.X loaded），方便确认实际运行的版本
 ## [0.9.0] - 2026-07-28
 
 ### Added
