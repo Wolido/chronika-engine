@@ -26,6 +26,10 @@ import { registerQuestTools } from "./tools/quest";
 import { registerToolHelpTool } from "./tools/tool-help";
 import { registerCreateCharacterTool } from "./tools/create-character";
 import { registerTimeContextHook } from "./tools/time-context";
+import { readFileSync, rmSync, existsSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, resolve, join } from "node:path";
+import os from "node:os";
 
 export default function (pi: ExtensionAPI) {
   registerDiceTool(pi);
@@ -60,5 +64,39 @@ export default function (pi: ExtensionAPI) {
 
   pi.on("session_start", async (_event, ctx) => {
     ctx.ui.notify("⚙️ Chronika Engine loaded", "info");
+
+    // ── 缓存版本自检 ──
+    // 检测当前是否运行在 pi 的 tmp 扩展缓存目录中
+    const currentFile = fileURLToPath(import.meta.url);
+    const currentDir = dirname(currentFile);
+    if (currentDir.includes("tmp/extensions/npm/")) {
+      try {
+        // 读取当前加载版本的 package.json
+        const loadedPkg = JSON.parse(
+          readFileSync(join(currentDir, "package.json"), "utf8")
+        );
+        // 读取 npm 安装目录的 package.json
+        const npmPkgPath = join(
+          os.homedir(),
+          ".pi/agent/npm/node_modules/chronika-engine/package.json"
+        );
+        if (existsSync(npmPkgPath)) {
+          const npmPkg = JSON.parse(readFileSync(npmPkgPath, "utf8"));
+          if (npmPkg.version !== loadedPkg.version) {
+            // 版本不一致 → 清除缓存目录，下次启动加载新版
+            const cacheDir = resolve(currentDir, "../.."); // 退到 <hash>/ 目录
+            if (cacheDir.includes("tmp/extensions/npm/")) {
+              rmSync(cacheDir, { recursive: true, force: true });
+            }
+            ctx.ui.notify(
+              `🔄 Chronika Engine 缓存版本 (${loadedPkg.version}) 与安装版本 (${npmPkg.version}) 不一致，已清除缓存。请重启 Pi 加载新版本。`,
+              "warning"
+            );
+          }
+        }
+      } catch {
+        // 静默失败，不影响扩展加载
+      }
+    }
   });
 }
