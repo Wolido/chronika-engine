@@ -98,6 +98,6 @@ export function getEncounter(input: EncounterRequest): EncounterResult {
     monster: { name: "", category: "", hp: 0, damage_min: 0, damage_max: 0, accuracy: 0, evasion: 0, armor: 0, tier: 0, xp_reward: 0 },
     approximate: false,
     note: "",
-    error: "No monsters found in database. Use world_gen to add monsters first, or create custom combat encounters manually.",
+    error: "No monsters found in database. The database does not contain any monster entries.",
   };
 }

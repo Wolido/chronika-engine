@@ -1,7 +1,6 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { registerDiceTool } from "./tools/dice";
 import { registerDBTools } from "./tools/db";
-import { registerWorldGenTool } from "./tools/world-gen";
 import { registerSkillCheckTool } from "./tools/skill-check";
 import { registerCombatTool } from "./tools/combat";
 import { registerLootTool } from "./tools/loot";
@@ -31,7 +30,6 @@ import { registerTimeContextHook } from "./tools/time-context";
 export default function (pi: ExtensionAPI) {
   registerDiceTool(pi);
   registerDBTools(pi);
-  registerWorldGenTool(pi);
   registerSkillCheckTool(pi);
   registerCombatTool(pi);
   registerLootTool(pi);

@@ -19,7 +19,7 @@ export function buildTimeContext(db: any): string {
   const date = `${info.year}-${pad(info.month)}-${pad(info.day)}`;
   const time = `${pad(info.hour)}:${pad(info.minute)}`;
   lines.push(
-    `[Chronika 时间] 当前游戏时间：${date} ${time} ${info.day_of_week_name}（${info.time_of_day}）· 第 ${info.day_number} 天 · 游戏内已流逝 ${info.elapsed_hours} 小时`,
+    `[Chronika 时间] 当前游戏时间：${date} ${time} ${info.day_of_week_name}（${info.time_of_day}）`,
   );
 
   if (pendingTimers.length > 0) {

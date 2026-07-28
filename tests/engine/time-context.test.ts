@@ -84,7 +84,7 @@ describe("buildTimeContext guard", () => {
 // ============================================================
 
 describe("buildTimeContext content", () => {
-  it("should include date, time of day, day number and elapsed time", () => {
+  it("should include date and time of day", () => {
     const db = fakeDb();
     initGameTime(db, "2260-06-15T14:30:00");
 
@@ -92,8 +92,6 @@ describe("buildTimeContext content", () => {
 
     assert.ok(text.includes("2260-06-15 14:30"), `missing datetime in: ${text}`);
     assert.ok(text.includes("下午"), `missing time of day in: ${text}`);
-    assert.ok(text.includes("第 1 天"), `missing day number in: ${text}`);
-    assert.ok(text.includes("已流逝"), `missing elapsed time in: ${text}`);
   });
 
   it("should mark night time", () => {

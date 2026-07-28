@@ -8,38 +8,6 @@ import { getToolHelp } from "../../engine/tool-help.ts";
 
 describe("getToolHelp", () => {
 
-  it("should return found=true with 6 parameters when querying world_gen", () => {
-    const result = getToolHelp("world_gen");
-
-    assert.strictEqual(result.found, true);
-    assert.strictEqual(result.tool.name, "world_gen");
-    assert.strictEqual(typeof result.tool.description, "string");
-    assert.ok(result.tool.description.length > 0, "description should not be empty");
-    assert.strictEqual(result.tool.parameters.length, 7);
-
-    const paramNames = result.tool.parameters.map(p => p.name);
-    assert.deepStrictEqual(paramNames, [
-      "world_meta",
-      "db_path",
-      "weapons",
-      "monsters",
-      "items",
-      "status_effects",
-      "actions",
-    ]);
-
-    // db_path should be required string
-    const dbPath = result.tool.parameters.find(p => p.name === "db_path")!;
-    assert.ok(dbPath, "db_path param should exist");
-    assert.strictEqual(dbPath.type, "string");
-    assert.strictEqual(dbPath.required, true);
-
-    // weapons should be optional array
-    const weapons = result.tool.parameters.find(p => p.name === "weapons")!;
-    assert.ok(weapons, "weapons param should exist");
-    assert.strictEqual(weapons.type, "array");
-    assert.strictEqual(weapons.required, false);
-  });
 
   it("should return found=true and include attacker.* and defender.* parameters when querying combat_resolve", () => {
     const result = getToolHelp("combat_resolve");
@@ -104,7 +72,6 @@ describe("getToolHelp", () => {
     // The 'list' query should return a tool whose name is "list"
     // and whose description enumerates the available tool names
     const toolNames = [
-      "world_gen",
       "combat_resolve",
       "skill_check",
       "craft",

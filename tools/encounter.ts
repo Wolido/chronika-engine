@@ -14,7 +14,7 @@ export function registerEncounterTool(pi: ExtensionAPI) {
   pi.registerTool({
     name: "get_encounter",
     label: "Get Encounter",
-    description: "Select a random monster from the database matching the given danger level. Uses monsters table populated by world_gen. If no exact tier match exists, returns the closest available. The GM can also create custom encounters without this tool by passing monster stats directly to combat_resolve.",
+    description: "If no exact tier match exists, returns the closest available. The GM can also create custom encounters without this tool by passing monster stats directly to combat_resolve.",
     parameters: Type.Object({
       db_path: Type.String({ description: "Path to game database" }),
       danger_level: Type.Number({ description: "Danger level 1-5" }),

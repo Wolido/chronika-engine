@@ -21,20 +21,6 @@ export interface ToolHelpResult {
 }
 
 const TOOLS: Record<string, ToolHelp> = {
-  world_gen: {
-    name: "world_gen",
-    description: "批量生成世界数据（武器/怪物/物品/状态效果/行为）",
-    parameters: [
-      { name: "world_meta", type: "object", required: false, description: "世界元数据 {world_name, world_desc?, tone?}", example: "{world_name: \"废土\"}" },
-      { name: "db_path", type: "string", required: true, description: "数据库文件路径", example: "./worlds/game.db" },
-      { name: "weapons", type: "array", required: false, description: "武器数组，每个需: name/category(melee/ranged/thrown/explosive)/damage_type(slashing/piercing/bludgeoning/thermal/explosive/chemical)/damage_min/damage_max/accuracy(0-1)/tier(1-5)/rarity(common/uncommon/rare/legendary)", constraints: "远程需额外: range_min/range_max/ammo_type" },
-      { name: "monsters", type: "array", required: false, description: "怪物数组，每个需: name/category(beast/mutant/humanoid/mechanical/abomination)/hp/damage_min/damage_max/accuracy(0-1)/evasion(0-1)/armor/tier(1-5)/xp_reward/strength(1-20)/agility(1-20)/endurance(1-20)/perception(1-20)/intelligence(1-20)/willpower(1-20)", constraints: "6属性总和 ≤ tier×17, accuracy+evasion ≤ 1.3" },
-      { name: "items", type: "array", required: false, description: "物品数组，每个需: name/item_type(consumable/material/armor/misc)/rarity(common/uncommon/rare/legendary)/value", constraints: "consumable必填: effect_type(heal/damage/restore)/effect_value(数字)；misc为null" },
-      { name: "status_effects", type: "array", required: false, description: "状态效果数组，每个需: name/effect_type(buff/debuff/dot/hot/stun/root)/target_attribute(hp/strength/agility/endurance/perception/intelligence/willpower)/magnitude/duration", constraints: "target_attribute 必填" },
-      { name: "actions", type: "array", required: false, description: "行为数组，每个需: name/action_type(combat/social/exploration/craft/survival)/primary_attr/difficulty(1-30)/success_result(JSON)/failure_result(JSON)" },
-    ],
-    example_call: `world_gen db_path: "./worlds/game.db", weapons: [{name: "铁管", category: "melee", damage_type: "bludgeoning", damage_min: 3, damage_max: 7, accuracy: 0.75, tier: 1, rarity: "common"}], monsters: [{name: "变异鼠", category: "beast", hp: 12, damage_min: 2, damage_max: 4, accuracy: 0.6, evasion: 0.35, armor: 0, tier: 1, xp_reward: 6, strength: 3, agility: 5, endurance: 3, perception: 4, intelligence: 1, willpower: 1}], items: [{name: "治疗粉", item_type: "consumable", rarity: "common", value: 15, effect_type: "heal", effect_value: 20}]`,
-  },
 
   combat_resolve: {
     name: "combat_resolve",
