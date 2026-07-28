@@ -107,8 +107,8 @@ export function generateWeapon(input: GenerateWeaponInput): GenerateWeaponResult
   const weight = weaponType === "melee" ? rollBetween(2, 6) : rollBetween(1, 4);
   const value = (RARITIES.indexOf(rarity) + 1) * dmgMax * 2;
 
-  // Generate name (LLM fills this)
-  const name = input.name_hint || "";
+  // Generate name (name_hint wins; otherwise deterministic from type+rarity)
+  const name = input.name_hint || generateWeaponName(weaponType, rarity);
 
   // Ranged extras
   let rangeMin: number | undefined;
@@ -182,4 +182,29 @@ export function generateWeapon(input: GenerateWeaponInput): GenerateWeaponResult
       legendary_roll: legendaryRoll,
     },
   };
+}
+
+// ── 武器命名池 ──
+const WEAPON_NOUNS: Record<string, string[]> = {
+  melee: ["砍刀", "匕首", "短刀", "弯刀", "铁棍", "战斧", "钉锤", "刺剑", "指虎", "铁锹"],
+  ranged: ["步枪", "手枪", "卡宾枪", "猎枪", "机枪", "射手步枪", "冲锋枪"],
+  thrown: ["飞刀", "投矛", "手里剑", "掷斧"],
+  explosive: ["榴弹发射器", "炸药包", "掷弹筒"],
+};
+
+const RARITY_PREFIXES: Record<string, string[]> = {
+  common: ["生锈的", "破旧的", "磨损的", "粗糙的", "开裂的"],
+  uncommon: ["结实的", "锋利的", "耐用的", "改造的", "加强的"],
+  rare: ["精制", "战前军用", "强化型", "黑曜石", "战术"],
+  legendary: ["毁灭者", "末日", "地狱火", "天罚", "龙息"],
+};
+
+function generateWeaponName(weaponType: string, rarity: string): string {
+  const nouns = WEAPON_NOUNS[weaponType] || ["武器"];
+  const prefixes = RARITY_PREFIXES[rarity] || [""];
+  // 用 weaponType + rarity 的 hash 做稳定索引，保证同一属性组合生成相同名字
+  const hash = weaponType.length + rarity.length + weaponType.charCodeAt(0) + (rarity.charCodeAt(0) || 0);
+  const noun = nouns[hash % nouns.length];
+  const prefix = prefixes[hash % prefixes.length];
+  return prefix ? `${prefix}${noun}` : noun;
 }

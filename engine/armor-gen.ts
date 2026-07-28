@@ -131,14 +131,14 @@ export function generateArmor(input: GenerateArmorInput): GenerateArmorResult {
   }
 
   const armor: GeneratedArmor = {
-    name: "",            // LLM fills
+    name: generateArmorName(slot, rarity),
     slot,
     defense,
     rarity,
     tier,
     weight,
     value,
-    description: "",     // LLM fills
+    description: `一件${rarity === "common" ? "" : rarity === "uncommon" ? "精良的" : rarity === "rare" ? "稀有的" : "传说的"}${slot === "head" ? "头部" : slot === "chest" ? "胸部" : "腿部"}护甲，防御 ${defense}。`,
     legendary_effect: legendaryEffect,
   };
 
@@ -147,4 +147,27 @@ export function generateArmor(input: GenerateArmorInput): GenerateArmorResult {
     armor,
     appropriateness_warnings: appropriatenessWarnings,
   };
+}
+
+// ── 护甲命名池 ──
+const ARMOR_NOUNS: Record<string, string[]> = {
+  head: ["头盔", "面罩", "护目镜", "钢盔", "兜帽"],
+  chest: ["胸甲", "护甲", "背心", "外套", "铠甲"],
+  legs: ["护腿", "腿甲", "胫甲", "绑腿", "膝甲"],
+};
+
+const ARMOR_RARITY_PREFIXES: Record<string, string[]> = {
+  common: ["破旧的", "磨损的", "开裂的", "简陋的", "修补的"],
+  uncommon: ["加固的", "结实的", "耐用的", "改装", "复合"],
+  rare: ["精制", "战前军用", "钛合金", "陶瓷", "重型"],
+  legendary: ["龙鳞", "凤凰", "不灭", "暗影", "圣盾"],
+};
+
+function generateArmorName(slot: string, rarity: string): string {
+  const nouns = ARMOR_NOUNS[slot] || ["护甲"];
+  const prefixes = ARMOR_RARITY_PREFIXES[rarity] || [""];
+  const hash = slot.length + rarity.length + (slot.charCodeAt(0) || 0);
+  const noun = nouns[hash % nouns.length];
+  const prefix = prefixes[hash % prefixes.length];
+  return prefix ? `${prefix}${noun}` : noun;
 }

@@ -17,6 +17,8 @@
 - generate_loot 新增防具掉落（60%概率）和饰品掉落（50%概率），调用 generateArmor/generateAccessory 生成
 - generate_loot 武器掉率提升至 70%（原为 25%-65% 随 tier）
 - 稀有度表统一为 common 15% / uncommon 25% / rare 35% / legendary 25%（原按 tier 区分，低 tier 传奇仅 2%）
+- generate_weapon/generate_armor/generate_accessory 自动生成装备名，不再返回空名（基于类型+稀有度 deterministic 生成）
+- GM 指南新增「战斗回合约束」硬规则：每次 combat_resolve 后必须停等玩家决策，不得连续自动多回合
 
 ### Fixed
 
@@ -27,6 +29,8 @@
 
 - generate_loot 的 LootItemEntry.type 新增 "armor" 和 "accessory" 类型
 - rollRarity 不再按 tier 区分稀有度，使用统一概率表
+- generate_weapon/generate_armor/generate_accessory 的 description 字段改为基于属性自动生成
+- 测试用例从断言 name="" 改为断言 name.length>0
 
 ## [Unreleased]
 

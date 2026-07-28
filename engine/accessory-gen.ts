@@ -91,12 +91,12 @@ export function generateAccessory(input: GenerateAccessoryInput): GenerateAccess
   }
 
   const accessory: GeneratedAccessory = {
-    name: "",            // LLM fills
+    name: generateAccessoryName(accessoryType, rarity),
     accessory_type: accessoryType,
     rarity,
     tier,
     value,
-    description: "",     // LLM fills
+    description: `一个${rarity === "common" ? "" : rarity === "uncommon" ? "精良的" : rarity === "rare" ? "稀有的" : "传说的"}${accessoryType}饰品。`,
     legendary_effect: legendaryEffect,
   };
 
@@ -104,4 +104,28 @@ export function generateAccessory(input: GenerateAccessoryInput): GenerateAccess
     success: true,
     accessory,
   };
+}
+
+// ── 饰品命名池 ──
+const ACCESSORY_NOUNS: Record<string, string[]> = {
+  ring: ["戒指", "指环", "环"],
+  amulet: ["项链", "吊坠", "护符", "挂链"],
+  trinket: ["徽章", "勋章", "硬币", "钥匙", "齿轮"],
+  charm: ["符咒", "护身符", "坠饰", "骨雕", "水晶"],
+};
+
+const ACCESSORY_RARITY_PREFIXES: Record<string, string[]> = {
+  common: ["褪色的", "磨损的", "普通的", "简陋的"],
+  uncommon: ["闪亮的", "完好的", "精致的", "古老的"],
+  rare: ["神秘的", "战前科技", "能量", "暗金"],
+  legendary: ["永恒", "灵魂", "命运", "虚空", "神谕"],
+};
+
+function generateAccessoryName(accessoryType: string, rarity: string): string {
+  const nouns = ACCESSORY_NOUNS[accessoryType] || ["饰品"];
+  const prefixes = ACCESSORY_RARITY_PREFIXES[rarity] || [""];
+  const hash = accessoryType.length + rarity.length;
+  const noun = nouns[hash % nouns.length];
+  const prefix = prefixes[hash % prefixes.length];
+  return prefix ? `${prefix}${noun}` : noun;
 }

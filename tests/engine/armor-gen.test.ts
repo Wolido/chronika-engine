@@ -35,10 +35,9 @@ describe("generateArmor", () => {
       undefined,
       "common armor should not have a legendary_effect"
     );
-    assert.strictEqual(
-      armor.name,
-      "",
-      "armor name should be empty (filled by LLM)"
+    assert.ok(
+      armor.name.length > 0,
+      "armor name should be auto-generated"
     );
   });
 

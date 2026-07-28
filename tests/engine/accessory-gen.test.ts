@@ -35,10 +35,9 @@ describe("generateAccessory", () => {
       undefined,
       "common accessory should not have a legendary_effect"
     );
-    assert.strictEqual(
-      accessory.name,
-      "",
-      "accessory name should be empty (filled by LLM)"
+    assert.ok(
+      accessory.name.length > 0,
+      "accessory name should be auto-generated"
     );
   });
 

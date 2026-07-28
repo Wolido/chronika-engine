@@ -70,10 +70,9 @@ describe("generateWeapon", () => {
     // Assert
     assert.strictEqual(result.success, true);
     assert.strictEqual(weapon.rarity, "legendary");
-    assert.strictEqual(
-      weapon.name,
-      "",
-      "weapon name should be empty (filled by LLM)"
+    assert.ok(
+      weapon.name.length > 0,
+      "weapon name should be auto-generated"
     );
     assert.ok(
       weapon.legendary_effect,
