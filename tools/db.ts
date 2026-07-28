@@ -132,7 +132,7 @@ export function registerDBTools(pi: ExtensionAPI) {
   pi.registerTool({
     name: "init_db",
     label: "Init DB",
-    description: "Create a new database for a wasteland survival RPG. Initializes 21 tables including locations, weapons, monsters, items, etc. Call this first when starting a new game. The world is a post-nuclear wasteland where survivors scavenge, fight mutants, and struggle to survive. On creation, automatically populates the database with 75 monsters, 13 items, 12 status effects, 15 locations with connections. Weapons, armor, and accessories are not seeded — generate them with generate_weapon during gameplay.",
+    description: "Create a new database for a wasteland survival RPG. Initializes 21 tables including locations, weapons, monsters, items, etc. Call this first when starting a new game. The world is a post-nuclear wasteland where survivors scavenge, fight mutants, and struggle to survive. On creation, automatically populates the database with 75 monsters, 13 items, 12 status effects, 15 locations with connections. Weapons, armor, and accessories are not seeded — generate them with generate_weapon during gameplay. The world is ready to play after this command — no additional world generation is needed.",
     parameters: Type.Object({
       db_path: Type.String({ description: "Path where to create the database (e.g. './worlds/my_game.db')" }),
       world_name: Type.Optional(Type.String({ description: "Optional world name stored in world_meta" })),
@@ -169,7 +169,7 @@ export function registerDBTools(pi: ExtensionAPI) {
         return {
           content: [{
             type: "text",
-            text: `✅ Created game database at \`${resolved}\`\nSchema: 11 tables, version ${SCHEMA_VERSION}` +
+            text: `✅ 世界已创建！数据库位于 \`${resolved}\`\n世界已就绪：75 种怪物、15 个地点、基础物品和状态效果均已就位。\n下一步：用 create_character 创建你的角色开始游戏！` +
               (params.world_name ? `\nWorld: ${params.world_name}` : ""),
           }],
           details: {

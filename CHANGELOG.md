@@ -1,5 +1,17 @@
 # Changelog
 
+## [Unreleased]
+
+## [0.8.1] - 2026-07-28
+
+### Changed
+- init_db 返回消息改为中文，明确告知 GM 世界已就绪、直接用 create_character 创建角色
+- tool-help 的 example 值从 world_gen 改为 combat_resolve
+
+### Fixed
+- GM 在 init_db 后仍尝试调用已删除的 world_gen 工具
+
+
 ## [0.8.0] - 2026-07-28
 
 ### Removed

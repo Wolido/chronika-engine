@@ -419,7 +419,7 @@ const TOOLS: Record<string, ToolHelp> = {
     name: "tool_help",
     description: "查看工具的完整参数schema和约束",
     parameters: [
-      { name: "name", type: "string", required: true, description: "工具名或'list'查看全部", example: "world_gen" },
+      { name: "name", type: "string", required: true, description: "工具名或'list'查看全部", example: "combat_resolve" },
     ],
   },
 };
